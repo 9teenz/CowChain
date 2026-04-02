@@ -139,6 +139,7 @@ export function DemoStateProvider({ children }: { children: ReactNode }) {
         ...current.wallet,
         connected: false,
         provider: null,
+        walletAddress: '',
       },
     }))
   }

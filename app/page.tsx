@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import { useEffect, useState } from 'react'
 import { HerdCard } from '@/components/herd-card'
 import { StatCard } from '@/components/stat-card'
 import { Button } from '@/components/ui/button'
@@ -8,7 +9,17 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { useDemoState } from '@/components/demo-state-provider'
 import { formatCurrency, formatNumber } from '@/lib/utils'
 import { shortenWallet } from '@/lib/solana-contract'
-import { Wallet, TrendingUp, Coins, Users, ArrowRight, Sparkles } from 'lucide-react'
+import { Wallet, TrendingUp, Coins, Users, ArrowRight, Sparkles, RefreshCw } from 'lucide-react'
+
+type Cluster = 'mainnet-beta' | 'devnet' | 'testnet'
+
+type PhantomRequestProvider = {
+  request: (args: { method: string; params?: unknown[] }) => Promise<unknown>
+}
+
+function isCluster(value: unknown): value is Cluster {
+  return value === 'mainnet-beta' || value === 'devnet' || value === 'testnet'
+}
 
 export default function DashboardPage() {
   const {
@@ -16,6 +27,48 @@ export default function DashboardPage() {
     portfolioSummary,
     claimDividends,
   } = useDemoState()
+
+  const [realSolBalance, setRealSolBalance] = useState<number | null>(null)
+  const [isSolLoading, setIsSolLoading] = useState(false)
+
+  const connectedWalletAddress = wallet.connected ? wallet.walletAddress : ''
+
+  const fetchSolBalance = async () => {
+    if (!wallet.connected || !connectedWalletAddress) {
+      setRealSolBalance(null)
+      return
+    }
+    setIsSolLoading(true)
+    try {
+      let preferredCluster: Cluster | 'auto' = 'auto'
+      try {
+        const provider = (window as Window & { solana?: PhantomRequestProvider }).solana
+        const providerCluster = await provider?.request?.({ method: 'getCluster' })
+        if (isCluster(providerCluster)) preferredCluster = providerCluster
+      } catch { /* fallback to auto */ }
+
+      const requestBalance = (cluster: Cluster | 'auto') => {
+        const params = new URLSearchParams({ address: connectedWalletAddress, cluster })
+        return fetch(`/api/wallet/balance?${params.toString()}`, { cache: 'no-store' })
+      }
+
+      let response = await requestBalance(preferredCluster)
+      let data = (await response.json()) as { ok: boolean; sol?: number }
+      if ((!response.ok || !data.ok) && preferredCluster !== 'auto') {
+        response = await requestBalance('auto')
+        data = (await response.json()) as { ok: boolean; sol?: number }
+      }
+      setRealSolBalance(data.ok && data.sol !== undefined ? data.sol : null)
+    } catch {
+      setRealSolBalance(null)
+    } finally {
+      setIsSolLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    fetchSolBalance()
+  }, [wallet.connected, connectedWalletAddress])
 
   const totalHerdSize = herds.reduce((sum, herd) => sum + herd.herdSize, 0)
   const totalTokens = herds.reduce((sum, herd) => sum + herd.totalTokens, 0)
@@ -72,15 +125,21 @@ export default function DashboardPage() {
                   <p className="mt-2 font-medium text-white">{formatCurrency(portfolioSummary.pendingDividendsUsd)}</p>
                 </div>
               </div>
-              <div className="grid gap-3 sm:grid-cols-2">
-                <div className="rounded-2xl border border-white/10 bg-black/15 p-4">
-                  <p className="text-xs uppercase tracking-[0.18em] text-white/55">SOL balance</p>
-                  <p className="mt-2 text-xl font-semibold text-white">{wallet.solBalance.toFixed(2)} SOL</p>
-                </div>
-                <div className="rounded-2xl border border-white/10 bg-black/15 p-4">
-                  <p className="text-xs uppercase tracking-[0.18em] text-white/55">Stablecoin balance</p>
-                  <p className="mt-2 text-xl font-semibold text-white">{formatCurrency(wallet.stablecoinBalance)}</p>
-                </div>
+              <div className="rounded-2xl border border-white/10 bg-black/15 p-4">
+                <p className="text-xs uppercase tracking-[0.18em] text-white/55">SOL balance</p>
+                <p className="mt-2 text-2xl font-bold text-white">
+                  {isSolLoading ? 'Loading...' : realSolBalance !== null ? `${realSolBalance.toFixed(4)} SOL` : wallet.connected ? 'Unavailable' : '—'}
+                </p>
+                {wallet.connected && (
+                  <button
+                    onClick={fetchSolBalance}
+                    disabled={isSolLoading}
+                    className="mt-2 flex items-center gap-1 text-xs text-white/50 hover:text-white/80 disabled:cursor-not-allowed"
+                  >
+                    <RefreshCw className="h-3 w-3" />
+                    Refresh
+                  </button>
+                )}
               </div>
               <Button
                 className="w-full bg-primary text-primary-foreground"

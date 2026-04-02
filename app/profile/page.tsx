@@ -1,8 +1,9 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { signOut, useSession } from 'next-auth/react'
-import { Award, Calendar, Check, Coins, Copy, PieChart, RefreshCw, Wallet } from 'lucide-react'
+import { Award, Calendar, Check, Coins, Copy, PieChart, RefreshCw, Unlink, Wallet } from 'lucide-react'
 import { StatCard } from '@/components/stat-card'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -22,8 +23,10 @@ function isCluster(value: unknown): value is Cluster {
 }
 
 export default function ProfilePage() {
+  const router = useRouter()
   const [copied, setCopied] = useState(false)
   const [createdAt, setCreatedAt] = useState<string | null>(null)
+  const [isUnlinking, setIsUnlinking] = useState(false)
   const [phantomSolBalance, setPhantomSolBalance] = useState<number | null>(null)
   const [isSolBalanceLoading, setIsSolBalanceLoading] = useState(false)
   const [solBalanceStatus, setSolBalanceStatus] = useState<string>('Live balance')
@@ -35,7 +38,7 @@ export default function ProfilePage() {
     claimDividends,
     disconnectWallet,
   } = useDemoState()
-  const { data: session } = useSession()
+  const { data: session, update: updateSession } = useSession()
   const { requireAuth } = useAuthGuard()
 
   const fullName = session?.user?.name || 'Unnamed user'
@@ -146,6 +149,17 @@ export default function ProfilePage() {
     await signOut({ callbackUrl: '/login' })
   }
 
+  const handleUnlinkWallet = async () => {
+    setIsUnlinking(true)
+    try {
+      await fetch('/api/wallet/link', { method: 'DELETE' })
+    } finally {
+      disconnectWallet()
+      setIsUnlinking(false)
+      await updateSession()
+    }
+  }
+
   const filteredTransactions = transactions.filter((transaction) => {
     const matchesKind = kindFilter === 'all' || transaction.kind === kindFilter
     const matchesCurrency = currencyFilter === 'all' || transaction.currency === currencyFilter
@@ -205,10 +219,16 @@ export default function ProfilePage() {
               </div>
             </div>
 
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
               <Button variant="outline" onClick={() => requireAuth(() => claimDividends(wallet.preferredDividendCurrency))}>
                 Claim Earnings
               </Button>
+              {wallet.connected && (
+                <Button variant="outline" onClick={handleUnlinkWallet} disabled={isUnlinking}>
+                  <Unlink className="mr-2 h-4 w-4" />
+                  {isUnlinking ? 'Unlinking...' : 'Unlink Wallet'}
+                </Button>
+              )}
               <Button variant="destructive" onClick={handleLogout}>
                 Logout
               </Button>

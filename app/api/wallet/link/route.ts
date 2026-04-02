@@ -43,3 +43,23 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: message }, { status: 500 })
   }
 }
+
+export async function DELETE() {
+  const session = await getServerSession(authOptions)
+
+  if (!session?.user?.id) {
+    return NextResponse.json({ error: 'Unauthorized.' }, { status: 401 })
+  }
+
+  try {
+    await prisma.user.update({
+      where: { id: session.user.id },
+      data: { walletAddress: null, walletProvider: null },
+    })
+
+    return NextResponse.json({ ok: true, message: 'Wallet unlinked successfully.' })
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Failed to unlink wallet.'
+    return NextResponse.json({ error: message }, { status: 500 })
+  }
+}
