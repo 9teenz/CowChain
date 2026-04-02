@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { getAvailableTokens, useDemoState } from '@/components/demo-state-provider'
+import { useAuthGuard } from '@/hooks/use-auth-guard'
 import { listingPremiumPct, shortenWallet } from '@/lib/solana-contract'
 import { formatCurrency, formatNumber } from '@/lib/utils'
 
@@ -27,6 +28,7 @@ export default function HerdDetailsPage({ params }: { params: Promise<{ id: stri
   const [salePrice, setSalePrice] = useState('1450')
   const [purchaseCurrency, setPurchaseCurrency] = useState<'SOL' | 'USDC'>('USDC')
   const [feedback, setFeedback] = useState<string | null>(null)
+  const { requireAuth } = useAuthGuard()
 
   const herd = herds.find((item) => item.id === id)
   const position = positions.find((item) => item.herdId === id)
@@ -58,18 +60,24 @@ export default function HerdDetailsPage({ params }: { params: Promise<{ id: stri
   }
 
   const handleNavBuy = () => {
-    const result = buyAtNav(herd.id, Number(tokenAmount), purchaseCurrency)
-    setFeedback(result.message)
+    requireAuth(() => {
+      const result = buyAtNav(herd.id, Number(tokenAmount), purchaseCurrency)
+      setFeedback(result.message)
+    })
   }
 
   const handleList = () => {
-    const result = listTokens(herd.id, Number(listingAmount), Number(listingPrice))
-    setFeedback(result.message)
+    requireAuth(() => {
+      const result = listTokens(herd.id, Number(listingAmount), Number(listingPrice))
+      setFeedback(result.message)
+    })
   }
 
   const handleSaleSimulation = () => {
-    const result = simulateCowSale(herd.id, Number(salePrice), purchaseCurrency)
-    setFeedback(result.message)
+    requireAuth(() => {
+      const result = simulateCowSale(herd.id, Number(salePrice), purchaseCurrency)
+      setFeedback(result.message)
+    })
   }
 
   return (

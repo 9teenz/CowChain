@@ -9,19 +9,15 @@ const footerLinks = {
     { label: 'Analytics', href: '/analytics' },
   ],
   resources: [
-    { label: 'Documentation', href: '#' },
-    { label: 'FAQ', href: '#' },
-    { label: 'Blog', href: '#' },
+    { label: 'Documentation', href: '/documentation' },
+    { label: 'FAQ', href: '/faq' },
   ],
   company: [
-    { label: 'About Us', href: '#' },
-    { label: 'Careers', href: '#' },
-    { label: 'Contact', href: '#' },
+    { label: 'Contact', href: '/contact' },
   ],
   legal: [
-    { label: 'Privacy Policy', href: '#' },
-    { label: 'Terms of Service', href: '#' },
-    { label: 'Risk Disclosure', href: '#' },
+    { label: 'Privacy Policy', href: '/privacy-policy' },
+    { label: 'Terms of Service', href: '/terms-of-service' },
   ],
 }
 
@@ -115,22 +111,12 @@ export function Footer() {
         {/* Bottom Section */}
         <div className="mt-12 flex flex-col items-center justify-between gap-4 border-t border-border pt-8 md:flex-row">
           <p className="text-sm text-muted-foreground">
-            &copy; {new Date().getFullYear()} CowFi. Demo frontend and Solana contract workflow.
+            &copy; 2026 CowFi. All rights reserved.
           </p>
           <div className="flex items-center gap-6">
+            <span className="text-sm text-muted-foreground">QuadCore Solutions</span>
             <a
-              href="https://twitter.com"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-muted-foreground transition-colors hover:text-foreground"
-              aria-label="Twitter"
-            >
-              <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 24 24">
-                <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
-              </svg>
-            </a>
-            <a
-              href="https://discord.com"
+              href="https://discord.gg/d6DQDZ37RJ"
               target="_blank"
               rel="noopener noreferrer"
               className="text-muted-foreground transition-colors hover:text-foreground"
@@ -141,7 +127,7 @@ export function Footer() {
               </svg>
             </a>
             <a
-              href="https://github.com"
+              href="https://github.com/9teenz/MilkChain"
               target="_blank"
               rel="noopener noreferrer"
               className="text-muted-foreground transition-colors hover:text-foreground"

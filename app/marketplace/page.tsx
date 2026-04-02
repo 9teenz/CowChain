@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from 'react'
 import { useDemoState } from '@/components/demo-state-provider'
+import { useAuthGuard } from '@/hooks/use-auth-guard'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -21,6 +22,7 @@ export default function MarketplacePage() {
   const [sortKey, setSortKey] = useState<SortKey>('recent')
   const [quantities, setQuantities] = useState<Record<string, string>>({})
   const [feedback, setFeedback] = useState<string | null>(null)
+  const { requireAuth } = useAuthGuard()
 
   const filteredListings = useMemo(() => {
     const items = listings.filter((listing) =>
@@ -158,10 +160,12 @@ export default function MarketplacePage() {
                       <td className="py-4">
                         <Button
                           size="sm"
-                          onClick={() => {
-                            const result = buyListing(listing.id, Number(quantityValue))
-                            setFeedback(result.message)
-                          }}
+                          onClick={() =>
+                            requireAuth(() => {
+                              const result = buyListing(listing.id, Number(quantityValue))
+                              setFeedback(result.message)
+                            })
+                          }
                         >
                           Buy
                         </Button>

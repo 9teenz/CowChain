@@ -35,7 +35,7 @@ type BuyCurrency = 'SOL' | 'USDC'
 interface DemoStateContextValue {
   isHydrated: boolean
   state: DemoState
-  connectWallet: (provider: WalletProviderName) => ActionResult
+  connectWallet: (provider: WalletProviderName, walletAddress?: string) => ActionResult
   disconnectWallet: () => void
   setPreferredDividendCurrency: (currency: BuyCurrency) => void
   buyAtNav: (herdId: string, tokenAmount: number, currency: BuyCurrency) => ActionResult
@@ -115,13 +115,14 @@ export function DemoStateProvider({ children }: { children: ReactNode }) {
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(state))
   }, [isHydrated, state])
 
-  const connectWallet = (provider: WalletProviderName): ActionResult => {
+  const connectWallet = (provider: WalletProviderName, walletAddress?: string): ActionResult => {
     setState((current) => ({
       ...current,
       wallet: {
         ...current.wallet,
         connected: true,
         provider,
+        walletAddress: walletAddress || current.wallet.walletAddress,
       },
     }))
 

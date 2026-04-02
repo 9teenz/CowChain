@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useTheme } from 'next-themes'
+import { signOut, useSession } from 'next-auth/react'
 import { Sun, Moon, Wallet, Menu, X, User, Coins } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
@@ -25,6 +26,8 @@ export function Navbar() {
     state: { wallet },
     portfolioSummary,
   } = useDemoState()
+  const { data: session, status } = useSession()
+  const isAuthenticated = status === 'authenticated'
   const [mounted, setMounted] = useState(false)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
 
@@ -97,11 +100,21 @@ export function Navbar() {
             )}
 
             <Button className="hidden gap-2 sm:flex" asChild>
-              <Link href={wallet.connected ? '/profile' : '/login'}>
+              <Link href={isAuthenticated ? '/profile' : '/connect-wallet'}>
                 <Wallet className="h-4 w-4" />
-                {wallet.connected ? shortenWallet(wallet.walletAddress) : 'Connect Wallet'}
+                {isAuthenticated ? (session?.user.walletAddress ? shortenWallet(session.user.walletAddress) : 'Profile') : 'Connect Wallet'}
               </Link>
             </Button>
+
+            {isAuthenticated && (
+              <Button
+                variant="outline"
+                className="hidden sm:flex"
+                onClick={() => signOut({ callbackUrl: '/login' })}
+              >
+                Sign out
+              </Button>
+            )}
 
             {/* Mobile Menu Button */}
             <Button
@@ -146,9 +159,9 @@ export function Navbar() {
                 Profile
               </Link>
               <Button className="mt-2 gap-2" asChild>
-                <Link href={wallet.connected ? '/profile' : '/login'}>
+                <Link href={isAuthenticated ? '/profile' : '/connect-wallet'}>
                   <Wallet className="h-4 w-4" />
-                  {wallet.connected ? shortenWallet(wallet.walletAddress) : 'Connect Wallet'}
+                  {isAuthenticated ? 'Profile' : 'Connect Wallet'}
                 </Link>
               </Button>
             </div>

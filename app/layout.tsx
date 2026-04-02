@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from 'next/font/google'
 import { Analytics } from '@vercel/analytics/next'
 import { ThemeProvider } from '@/components/theme-provider'
 import { DemoStateProvider } from '@/components/demo-state-provider'
+import { AuthSessionProvider } from '@/components/auth-session-provider'
 import { Navbar } from '@/components/navbar'
 import { Footer } from '@/components/footer'
 import './globals.css'
@@ -40,20 +41,22 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className="font-sans antialiased">
+      <body className="font-sans antialiased" suppressHydrationWarning>
         <ThemeProvider
           attribute="class"
           defaultTheme="system"
           enableSystem
           disableTransitionOnChange
         >
-          <DemoStateProvider>
-            <Navbar />
-            <main className="min-h-screen pt-16">
-              {children}
-            </main>
-            <Footer />
-          </DemoStateProvider>
+          <AuthSessionProvider>
+            <DemoStateProvider>
+              <Navbar />
+              <main className="min-h-screen pt-16">
+                {children}
+              </main>
+              <Footer />
+            </DemoStateProvider>
+          </AuthSessionProvider>
         </ThemeProvider>
         <Analytics />
       </body>

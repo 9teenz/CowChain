@@ -7,6 +7,7 @@ import { StatCard } from '@/components/stat-card'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { useDemoState } from '@/components/demo-state-provider'
+import { useAuthGuard } from '@/hooks/use-auth-guard'
 import { formatCurrency, formatNumber } from '@/lib/utils'
 
 export default function PortfolioPage() {
@@ -15,6 +16,7 @@ export default function PortfolioPage() {
     portfolioSummary,
     claimDividends,
   } = useDemoState()
+  const { requireAuth } = useAuthGuard()
 
   const totalInvested = positions.reduce((sum, item) => sum + item.tokensOwned * item.averageCostUsd, 0)
   const roi = totalInvested === 0 ? 0 : ((portfolioSummary.marketValueUsd - totalInvested) / totalInvested) * 100
@@ -166,7 +168,7 @@ export default function PortfolioPage() {
             </div>
             <Button
               className="w-full"
-              onClick={() => claimDividends(wallet.preferredDividendCurrency)}
+              onClick={() => requireAuth(() => claimDividends(wallet.preferredDividendCurrency))}
               disabled={portfolioSummary.pendingDividendsUsd <= 0}
             >
               Claim dividends

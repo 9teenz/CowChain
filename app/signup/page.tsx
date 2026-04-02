@@ -1,8 +1,9 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
+import { signIn } from 'next-auth/react'
 import { CowIcon } from '@/components/icons/cow-icon'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -12,25 +13,109 @@ import { Mail, Lock, Eye, EyeOff, User, Check } from 'lucide-react'
 
 export default function SignupPage() {
   const router = useRouter()
+  const didRunVerification = useRef(false)
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
+  const [name, setName] = useState('')
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
+  const [message, setMessage] = useState<string | null>(null)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    const verifyToken = params.get('verifyToken')
+    if (!verifyToken || didRunVerification.current) {
+      return
+    }
+
+    didRunVerification.current = true
+
+    const verifyEmail = async () => {
+      setIsLoading(true)
+      setError(null)
+
+      const response = await fetch('/api/auth/verify/confirm', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token: verifyToken }),
+      })
+
+      const data = (await response.json()) as { error?: string; message?: string }
+      setIsLoading(false)
+
+      if (!response.ok) {
+        setError(data.error || 'Verification failed.')
+        return
+      }
+
+      setMessage(data.message || 'Email verified. You can now sign in.')
+      router.push('/profile')
+    }
+
+    verifyEmail()
+  }, [router])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    setError(null)
+    setMessage(null)
+
+    if (password !== confirmPassword) {
+      setError('Passwords do not match.')
+      return
+    }
+
     setIsLoading(true)
-    // Simulate signup
-    await new Promise((resolve) => setTimeout(resolve, 1500))
+
+    const response = await fetch('/api/auth/register', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, email, password }),
+    })
+
+    const data = (await response.json()) as { error?: string; message?: string }
     setIsLoading(false)
-    router.push('/profile')
+
+    if (!response.ok) {
+      setError(data.error || 'Failed to create account.')
+      return
+    }
+
+    setMessage(data.message || 'Account created. Check your email for verification link.')
   }
 
   const handleSocialSignup = async (provider: string) => {
     setIsLoading(true)
-    // Simulate social signup
-    await new Promise((resolve) => setTimeout(resolve, 1000))
+    await signIn(provider, { callbackUrl: '/profile' })
+  }
+
+  const resendVerification = async () => {
+    if (!email) {
+      setError('Enter your email to resend verification.')
+      return
+    }
+
+    setIsLoading(true)
+    setError(null)
+
+    const response = await fetch('/api/auth/verify/request', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email }),
+    })
+
+    const data = (await response.json()) as { error?: string; message?: string }
     setIsLoading(false)
-    router.push('/profile')
+
+    if (!response.ok) {
+      setError(data.error || 'Failed to resend verification email.')
+      return
+    }
+
+    setMessage(data.message || 'Verification email sent.')
   }
 
   return (
@@ -51,6 +136,7 @@ export default function SignupPage() {
           {/* Social Signup Buttons */}
           <div className="grid gap-3">
             <Button
+              type="button"
               variant="outline"
               className="w-full gap-3"
               onClick={() => handleSocialSignup('google')}
@@ -77,6 +163,7 @@ export default function SignupPage() {
               Sign up with Google
             </Button>
             <Button
+              type="button"
               variant="outline"
               className="w-full gap-3"
               onClick={() => handleSocialSignup('github')}
@@ -110,6 +197,8 @@ export default function SignupPage() {
                   type="text"
                   placeholder="John Doe"
                   className="pl-10"
+                  value={name}
+                  onChange={(event) => setName(event.target.value)}
                   required
                 />
               </div>
@@ -123,6 +212,8 @@ export default function SignupPage() {
                   type="email"
                   placeholder="you@example.com"
                   className="pl-10"
+                  value={email}
+                  onChange={(event) => setEmail(event.target.value)}
                   required
                 />
               </div>
@@ -136,6 +227,8 @@ export default function SignupPage() {
                   type={showPassword ? 'text' : 'password'}
                   placeholder="Create a password"
                   className="pl-10 pr-10"
+                  value={password}
+                  onChange={(event) => setPassword(event.target.value)}
                   required
                 />
                 <button
@@ -160,6 +253,8 @@ export default function SignupPage() {
                   type={showConfirmPassword ? 'text' : 'password'}
                   placeholder="Confirm your password"
                   className="pl-10 pr-10"
+                  value={confirmPassword}
+                  onChange={(event) => setConfirmPassword(event.target.value)}
                   required
                 />
                 <button
@@ -209,6 +304,13 @@ export default function SignupPage() {
                 </>
               )}
             </Button>
+
+            <Button type="button" variant="outline" className="w-full" onClick={resendVerification} disabled={isLoading}>
+              Resend verification email
+            </Button>
+
+            {message ? <p className="text-sm text-green-600">{message}</p> : null}
+            {error ? <p className="text-sm text-red-500">{error}</p> : null}
           </form>
 
           {/* Sign In Link */}
@@ -217,6 +319,18 @@ export default function SignupPage() {
             <Link href="/login" className="text-primary hover:underline">
               Sign in
             </Link>
+          </p>
+
+          <p className="text-center text-xs text-muted-foreground">
+            After email verification, continue on the{' '}
+            <button
+              type="button"
+              onClick={() => router.push('/login')}
+              className="text-primary hover:underline"
+            >
+              sign in page
+            </button>
+            .
           </p>
         </CardContent>
       </Card>
