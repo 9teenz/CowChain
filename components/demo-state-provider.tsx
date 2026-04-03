@@ -16,11 +16,12 @@ import type {
   DemoState,
   HerdPool,
   MarketplaceListing,
+  PlatformToken,
   TransactionItem,
   UserPosition,
   WalletProviderName,
 } from '@/lib/demo-data'
-import { initialDemoState } from '@/lib/demo-data'
+import { initialDemoState, PLATFORM_TOKEN_SYMBOL } from '@/lib/demo-data'
 
 const STORAGE_KEY = 'cowfi-demo-state'
 
@@ -46,7 +47,7 @@ interface DemoStateContextValue {
   addCowsToHerd: (herdId: string, count: number, costPerCowUsd: number) => ActionResult
   updateMilkRevenue: (herdId: string, newAnnualRevenueUsd: number) => ActionResult
   portfolioSummary: {
-    totalTokensOwned: number
+    userPlatformTokens: number
     totalHerdShares: number
     currentNavValueUsd: number
     marketValueUsd: number
@@ -57,14 +58,60 @@ interface DemoStateContextValue {
 
 const DemoStateContext = createContext<DemoStateContextValue | null>(null)
 
-function syncMarketMetrics(herds: HerdPool[], listings: MarketplaceListing[]) {
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value)
+}
+
+function normalizePersistedDemoState(value: unknown): DemoState {
+  if (!isRecord(value)) {
+    return initialDemoState
+  }
+
+  const wallet = isRecord(value.wallet)
+    ? { ...initialDemoState.wallet, ...value.wallet }
+    : initialDemoState.wallet
+
+  const platform = isRecord(value.platform)
+    ? { ...initialDemoState.platform, ...(value.platform as Partial<PlatformToken>) }
+    : initialDemoState.platform
+
+  const herds = Array.isArray(value.herds) ? (value.herds as HerdPool[]) : initialDemoState.herds
+  const positions = Array.isArray(value.positions) ? (value.positions as UserPosition[]) : initialDemoState.positions
+  const listings = Array.isArray(value.listings)
+    ? (value.listings as MarketplaceListing[])
+    : initialDemoState.listings
+  const sales = Array.isArray(value.sales) ? (value.sales as CowSaleEvent[]) : initialDemoState.sales
+  const transactions = Array.isArray(value.transactions)
+    ? (value.transactions as TransactionItem[])
+    : initialDemoState.transactions
+  const portfolioValueSeries = Array.isArray(value.portfolioValueSeries)
+    ? (value.portfolioValueSeries as DemoState['portfolioValueSeries'])
+    : initialDemoState.portfolioValueSeries
+  const dividendSeries = Array.isArray(value.dividendSeries)
+    ? (value.dividendSeries as DemoState['dividendSeries'])
+    : initialDemoState.dividendSeries
+
+  return {
+    wallet,
+    platform,
+    herds: syncMarketMetrics(herds, listings, platform.navPerTokenUsd),
+    positions,
+    listings,
+    sales,
+    transactions,
+    portfolioValueSeries,
+    dividendSeries,
+  }
+}
+
+function syncMarketMetrics(herds: HerdPool[], listings: MarketplaceListing[], platformNavUsd: number) {
   return herds.map((herd) => {
     const herdListings = listings
       .filter((listing) => listing.herdId === herd.id && listing.tokensAvailable > 0)
       .sort((left, right) => left.pricePerTokenUsd - right.pricePerTokenUsd)
 
     const cheapestListing = herdListings[0]
-    const marketPriceUsd = cheapestListing?.pricePerTokenUsd ?? herd.navPerTokenUsd
+    const marketPriceUsd = cheapestListing?.pricePerTokenUsd ?? platformNavUsd
 
     return {
       ...herd,
@@ -100,7 +147,7 @@ export function DemoStateProvider({ children }: { children: ReactNode }) {
     try {
       const raw = window.localStorage.getItem(STORAGE_KEY)
       if (raw) {
-        setState(JSON.parse(raw) as DemoState)
+        setState(normalizePersistedDemoState(JSON.parse(raw)))
       }
     } catch {
       setState(initialDemoState)
@@ -170,7 +217,7 @@ export function DemoStateProvider({ children }: { children: ReactNode }) {
       return { ok: false, message: 'Herd not found.' }
     }
 
-    if (tokenAmount > herd.availableDirectTokens) {
+    if (tokenAmount > state.platform.availableTokens) {
       return { ok: false, message: 'Requested amount exceeds direct platform inventory.' }
     }
 
@@ -188,14 +235,12 @@ export function DemoStateProvider({ children }: { children: ReactNode }) {
     const txId = generateDemoSignature()
 
     setState((current) => {
-      const herds = current.herds.map((item) =>
-        item.id === herdId
-          ? {
-              ...item,
-              availableDirectTokens: item.availableDirectTokens - tokenAmount,
-            }
-          : item
-      )
+      const herds = current.herds.map((item) => item.id === herdId ? { ...item } : item)
+
+      const platform: PlatformToken = {
+        ...current.platform,
+        availableTokens: current.platform.availableTokens - tokenAmount,
+      }
 
       const existingPosition = current.positions.find((position) => position.herdId === herdId)
       const positions = existingPosition
@@ -247,6 +292,7 @@ export function DemoStateProvider({ children }: { children: ReactNode }) {
                 ? Number((current.wallet.stablecoinBalance - totalUsd).toFixed(2))
                 : current.wallet.stablecoinBalance,
           },
+          platform,
           herds,
           positions,
         },
@@ -266,7 +312,7 @@ export function DemoStateProvider({ children }: { children: ReactNode }) {
 
     return {
       ok: true,
-      message: `${tokenAmount.toLocaleString()} ${herd.tokenSymbol} minted at NAV.`,
+      message: `${tokenAmount.toLocaleString()} ${PLATFORM_TOKEN_SYMBOL} minted at NAV.`,
       txId,
     }
   }
@@ -317,7 +363,7 @@ export function DemoStateProvider({ children }: { children: ReactNode }) {
           : item
       )
 
-      const herds = syncMarketMetrics(current.herds, listings)
+      const herds = syncMarketMetrics(current.herds, listings, current.platform.navPerTokenUsd)
 
       return pushTransaction(
         {
@@ -329,7 +375,7 @@ export function DemoStateProvider({ children }: { children: ReactNode }) {
         {
           id: `txn-${txId}`,
           kind: 'listing',
-          label: `Listed ${tokenAmount.toLocaleString()} ${herd.tokenSymbol} for P2P sale`,
+          label: `Listed ${tokenAmount.toLocaleString()} ${PLATFORM_TOKEN_SYMBOL} for P2P sale`,
           amountUsd: Number((tokenAmount * pricePerTokenUsd).toFixed(2)),
           currency: 'SOL',
           txId,
@@ -421,7 +467,7 @@ export function DemoStateProvider({ children }: { children: ReactNode }) {
         return withBuyer
       })()
 
-      const herds = syncMarketMetrics(current.herds, listings)
+      const herds = syncMarketMetrics(current.herds, listings, current.platform.navPerTokenUsd)
 
       const nextWallet = {
         ...current.wallet,
@@ -539,22 +585,19 @@ export function DemoStateProvider({ children }: { children: ReactNode }) {
         return current
       }
 
-      const navAfterUsd = calculateNavAfterSale(targetHerd.navPerTokenUsd, targetHerd.totalTokens, salePriceUsd)
-      const dividendPerTokenUsd = Number((salePriceUsd / targetHerd.totalTokens).toFixed(6))
+      const platformTokenSupply = current.platform.totalSupply
+      const navAfterUsd = calculateNavAfterSale(targetHerd.navPerTokenUsd, platformTokenSupply, salePriceUsd)
+      const dividendPerTokenUsd = Number((salePriceUsd / platformTokenSupply).toFixed(6))
 
-      const positions = current.positions.map((item) =>
-        item.herdId === herdId
-          ? {
-              ...item,
-              pendingDividendsUsd: Number(
-                (
-                  item.pendingDividendsUsd +
-                  calculateUserDividend(item.tokensOwned, targetHerd.totalTokens, salePriceUsd)
-                ).toFixed(2)
-              ),
-            }
-          : item
-      )
+      const positions = current.positions.map((item) => ({
+        ...item,
+        pendingDividendsUsd: Number(
+          (
+            item.pendingDividendsUsd +
+            calculateUserDividend(item.tokensOwned, platformTokenSupply, salePriceUsd)
+          ).toFixed(2)
+        ),
+      }))
 
       const herds = syncMarketMetrics(
         current.herds.map((item) =>
@@ -568,14 +611,15 @@ export function DemoStateProvider({ children }: { children: ReactNode }) {
               }
             : item
         ),
-        current.listings
+        current.listings,
+        navAfterUsd
       )
 
       const saleEvent: CowSaleEvent = {
         id: `sale-${generateDemoSignature(8)}`,
         herdId,
         herdName: targetHerd.name,
-        cowTag: `${targetHerd.tokenSymbol.slice(0, 3)}-${String(targetHerd.herdSize).padStart(3, '0')}`,
+        cowTag: `${current.platform.symbol.slice(0, 3)}-${String(targetHerd.herdSize).padStart(3, '0')}`,
         salePriceUsd: Number(salePriceUsd.toFixed(2)),
         dividendPerTokenUsd,
         navBeforeUsd: targetHerd.navPerTokenUsd,
@@ -665,36 +709,40 @@ export function DemoStateProvider({ children }: { children: ReactNode }) {
   }
 
   const portfolioSummary = useMemo(() => {
-    const totalTokensOwned = state.positions.reduce((sum, position) => sum + position.tokensOwned, 0)
+    const positions = state.positions ?? initialDemoState.positions
+    const herds = state.herds ?? initialDemoState.herds
+    const platformTokenSupply = (state.platform ?? initialDemoState.platform).totalSupply
 
-    const totalHerdShares = state.positions.reduce((sum, position) => {
-      const herd = state.herds.find((item) => item.id === position.herdId)
+    const userPlatformTokens = positions.reduce((sum, position) => sum + position.tokensOwned, 0)
+
+    const totalHerdShares = positions.reduce((sum, position) => {
+      const herd = herds.find((item) => item.id === position.herdId)
       if (!herd) {
         return sum
       }
 
-      return sum + (position.tokensOwned / herd.totalTokens) * herd.herdSize
+      return sum + (position.tokensOwned / platformTokenSupply) * herd.herdSize
     }, 0)
 
-    const currentNavValueUsd = state.positions.reduce((sum, position) => {
-      const herd = state.herds.find((item) => item.id === position.herdId)
+    const currentNavValueUsd = positions.reduce((sum, position) => {
+      const herd = herds.find((item) => item.id === position.herdId)
       return sum + position.tokensOwned * (herd?.navPerTokenUsd ?? 0)
     }, 0)
 
-    const marketValueUsd = state.positions.reduce((sum, position) => {
-      const herd = state.herds.find((item) => item.id === position.herdId)
+    const marketValueUsd = positions.reduce((sum, position) => {
+      const herd = herds.find((item) => item.id === position.herdId)
       return sum + projectedMarketValue(position.tokensOwned, herd?.marketPriceUsd ?? 0)
     }, 0)
 
-    const totalDividendsEarnedUsd = state.positions.reduce(
+    const totalDividendsEarnedUsd = positions.reduce(
       (sum, position) => sum + position.claimedDividendsUsd + position.pendingDividendsUsd,
       0
     )
 
-    const pendingDividendsUsd = state.positions.reduce((sum, position) => sum + position.pendingDividendsUsd, 0)
+    const pendingDividendsUsd = positions.reduce((sum, position) => sum + position.pendingDividendsUsd, 0)
 
     return {
-      totalTokensOwned,
+      userPlatformTokens,
       totalHerdShares: Number(totalHerdShares.toFixed(2)),
       currentNavValueUsd: Number(currentNavValueUsd.toFixed(2)),
       marketValueUsd: Number(marketValueUsd.toFixed(2)),

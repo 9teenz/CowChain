@@ -12,7 +12,7 @@ import { formatCurrency, formatNumber } from '@/lib/utils'
 
 export default function PortfolioPage() {
   const {
-    state: { herds, positions, transactions, portfolioValueSeries, dividendSeries, wallet },
+    state: { herds, positions, transactions, portfolioValueSeries, dividendSeries, wallet, platform },
     portfolioSummary,
     claimDividends,
   } = useDemoState()
@@ -32,8 +32,8 @@ export default function PortfolioPage() {
 
       <div className="mb-8 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard
-          title="Total Tokens Owned"
-          value={formatNumber(portfolioSummary.totalTokensOwned)}
+          title="PlatformToken Balance"
+          value={formatNumber(portfolioSummary.userPlatformTokens)}
           change="Across all herd pools"
           changeType="neutral"
           icon={Coins}
@@ -129,7 +129,7 @@ export default function PortfolioPage() {
                 <tbody>
                   {positions.map((position) => {
                     const herd = herds.find((item) => item.id === position.herdId)
-                    const share = herd ? (position.tokensOwned / herd.totalTokens) * 100 : 0
+                    const share = herd ? (position.tokensOwned / platform.totalSupply) * 100 : 0
                     const marketValue = herd ? position.tokensOwned * herd.marketPriceUsd : 0
 
                     return (

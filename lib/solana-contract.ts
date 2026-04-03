@@ -64,11 +64,11 @@ export function projectedMarketValue(tokensOwned: number, pricePerTokenUsd: numb
 
 export function buildActionLabel(kind: 'nav' | 'market' | 'claim' | 'sale', herdName?: string) {
   if (kind === 'nav') {
-    return `Minted herd shares at NAV for ${herdName}`
+    return `Minted CowChain tokens at NAV for ${herdName}`
   }
 
   if (kind === 'market') {
-    return `Matched P2P order on ${herdName}`
+    return `Matched P2P CowChain order on ${herdName}`
   }
 
   if (kind === 'claim') {

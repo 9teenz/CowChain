@@ -214,7 +214,7 @@ export default function ProfilePage() {
                 </span>
                 <span className="flex items-center gap-1">
                   <Coins className="h-4 w-4" />
-                  {formatNumber(portfolioSummary.totalTokensOwned)} tokens owned
+                  {formatNumber(portfolioSummary.userPlatformTokens)} tokens owned
                 </span>
               </div>
             </div>

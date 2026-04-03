@@ -10,12 +10,13 @@ import { Input } from '@/components/ui/input'
 import { getAvailableTokens, useDemoState } from '@/components/demo-state-provider'
 import { useAuthGuard } from '@/hooks/use-auth-guard'
 import { listingPremiumPct, shortenWallet } from '@/lib/solana-contract'
+import { PLATFORM_TOKEN_SYMBOL } from '@/lib/demo-data'
 import { formatCurrency, formatNumber } from '@/lib/utils'
 
 export default function HerdDetailsPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params)
   const {
-    state: { herds, positions, listings, sales },
+    state: { herds, positions, listings, sales, platform },
     buyAtNav,
     listTokens,
     buyListing,
@@ -41,9 +42,9 @@ export default function HerdDetailsPage({ params }: { params: Promise<{ id: stri
     }
 
     const tokens = Number(tokenAmount) || 0
-    const sharePercent = tokens / herd.totalTokens
+    const sharePercent = tokens / platform.totalSupply
     return herd.expectedAnnualRevenueUsd * 0.12 * sharePercent
-  }, [herd, tokenAmount])
+  }, [herd, tokenAmount, platform.totalSupply])
 
   if (!herd) {
     return (
@@ -95,7 +96,7 @@ export default function HerdDetailsPage({ params }: { params: Promise<{ id: stri
           <div className="flex flex-wrap items-center gap-3">
             <h1 className="text-3xl font-bold tracking-tight">{herd.name}</h1>
             <div className="rounded-full bg-primary/10 px-3 py-1 text-sm font-medium text-primary">{herd.healthStatus}</div>
-            <div className="rounded-full border border-border px-3 py-1 text-sm font-medium text-muted-foreground">{herd.tokenSymbol}</div>
+            <div className="rounded-full border border-border px-3 py-1 text-sm font-medium text-muted-foreground">{PLATFORM_TOKEN_SYMBOL}</div>
           </div>
           <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
             <span className="inline-flex items-center gap-1.5">
@@ -117,14 +118,14 @@ export default function HerdDetailsPage({ params }: { params: Promise<{ id: stri
         <div className="grid min-w-[280px] gap-3 sm:grid-cols-2 lg:w-[360px]">
           <div className="rounded-2xl border border-primary/20 bg-primary/5 p-4">
             <p className="text-sm text-muted-foreground">Token price (NAV)</p>
-            <p className="mt-2 text-3xl font-bold text-primary">{formatCurrency(herd.navPerTokenUsd)}</p>
+            <p className="mt-2 text-3xl font-bold text-primary">{formatCurrency(platform.navPerTokenUsd)}</p>
           </div>
           <div className="rounded-2xl border border-border p-4">
             <p className="text-sm text-muted-foreground">Market price</p>
             <p className="mt-2 text-3xl font-bold">{formatCurrency(herd.marketPriceUsd)}</p>
             <p className="mt-2 text-sm text-muted-foreground">
-              {listingPremiumPct(herd.marketPriceUsd, herd.navPerTokenUsd) > 0 ? '+' : ''}
-              {listingPremiumPct(herd.marketPriceUsd, herd.navPerTokenUsd)}% vs NAV
+              {listingPremiumPct(herd.marketPriceUsd, platform.navPerTokenUsd) > 0 ? '+' : ''}
+              {listingPremiumPct(herd.marketPriceUsd, platform.navPerTokenUsd)}% vs NAV
             </p>
           </div>
         </div>
@@ -145,14 +146,14 @@ export default function HerdDetailsPage({ params }: { params: Promise<{ id: stri
         </Card>
         <Card>
           <CardContent className="p-5">
-            <p className="text-sm text-muted-foreground">Total tokens</p>
-            <p className="mt-2 text-2xl font-bold">{formatNumber(herd.totalTokens)}</p>
+            <p className="text-sm text-muted-foreground">Platform token supply</p>
+            <p className="mt-2 text-2xl font-bold">{formatNumber(platform.totalSupply)}</p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-5">
             <p className="text-sm text-muted-foreground">Available at NAV</p>
-            <p className="mt-2 text-2xl font-bold">{formatNumber(herd.availableDirectTokens)}</p>
+            <p className="mt-2 text-2xl font-bold">{formatNumber(platform.availableTokens)}</p>
           </CardContent>
         </Card>
         <Card>
@@ -312,10 +313,10 @@ export default function HerdDetailsPage({ params }: { params: Promise<{ id: stri
               <div className="rounded-2xl border border-primary/20 bg-primary/5 p-4">
                 <p className="text-sm text-muted-foreground">Estimated annual dividend stream</p>
                 <p className="mt-2 text-3xl font-bold text-primary">{formatCurrency(estimatedEarnings)}</p>
-                <p className="mt-2 text-sm text-muted-foreground">Cost at NAV: {formatCurrency((Number(tokenAmount) || 0) * herd.navPerTokenUsd)}</p>
+                <p className="mt-2 text-sm text-muted-foreground">Cost at NAV: {formatCurrency((Number(tokenAmount) || 0) * platform.navPerTokenUsd)}</p>
               </div>
               <Button className="w-full" onClick={handleNavBuy}>
-                Buy herd tokens at NAV
+                Buy PlatformToken at NAV
               </Button>
             </CardContent>
           </Card>

@@ -18,12 +18,12 @@ import {
 
 export default function AnalyticsPage() {
   const {
-    state: { herds, listings, sales, positions, transactions },
+    state: { platform, herds, listings, sales, positions, transactions },
   } = useDemoState()
 
   const navVsMarketData = herds.map((herd) => ({
     herd: herd.name.split(' ')[0],
-    nav: herd.navPerTokenUsd,
+    nav: platform.navPerTokenUsd,
     market: herd.marketPriceUsd,
   }))
 

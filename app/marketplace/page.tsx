@@ -15,7 +15,7 @@ type SortKey = 'recent' | 'price-asc' | 'price-desc' | 'return-desc'
 
 export default function MarketplacePage() {
   const {
-    state: { herds, listings },
+    state: { platform, herds, listings },
     buyListing,
   } = useDemoState()
   const [selectedHerd, setSelectedHerd] = useState('all')
@@ -42,12 +42,11 @@ export default function MarketplacePage() {
         const leftHerd = herds.find((item) => item.id === left.herdId)
         const rightHerd = herds.find((item) => item.id === right.herdId)
         return (
-          listingPremiumPct(right.pricePerTokenUsd, rightHerd?.navPerTokenUsd ?? 0) -
-          listingPremiumPct(left.pricePerTokenUsd, leftHerd?.navPerTokenUsd ?? 0)
+          listingPremiumPct(right.pricePerTokenUsd, platform.navPerTokenUsd) -
+          listingPremiumPct(left.pricePerTokenUsd, platform.navPerTokenUsd)
         )
       }
-
-      return new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime()
+      return 0
     })
   }, [herds, listings, selectedHerd, sortKey])
 
@@ -55,7 +54,7 @@ export default function MarketplacePage() {
   const averagePremium = filteredListings.length
     ? filteredListings.reduce((sum, listing) => {
         const herd = herds.find((item) => item.id === listing.herdId)
-        return sum + listingPremiumPct(listing.pricePerTokenUsd, herd?.navPerTokenUsd ?? 0)
+        return sum + listingPremiumPct(listing.pricePerTokenUsd, platform.navPerTokenUsd)
       }, 0) / filteredListings.length
     : 0
 
@@ -129,15 +128,15 @@ export default function MarketplacePage() {
               <tbody>
                 {filteredListings.map((listing) => {
                   const herd = herds.find((item) => item.id === listing.herdId)
-                  const premium = listingPremiumPct(listing.pricePerTokenUsd, herd?.navPerTokenUsd ?? 0)
+                  const premium = listingPremiumPct(listing.pricePerTokenUsd, platform.navPerTokenUsd)
                   const quantityValue = quantities[listing.id] ?? String(Math.min(250, listing.tokensAvailable))
 
                   return (
                     <tr key={listing.id} className="border-b border-border last:border-0">
-                      <td className="py-4 font-medium">{listing.herdName}</td>
+                      <td className="py-4 font-medium">{listing.herdName}</td>  
                       <td className="py-4">{formatNumber(listing.tokensAvailable)}</td>
                       <td className="py-4">{formatCurrency(listing.pricePerTokenUsd)}</td>
-                      <td className="py-4">{formatCurrency(herd?.navPerTokenUsd ?? 0)}</td>
+                      <td className="py-4">{formatCurrency(platform.navPerTokenUsd)}</td>
                       <td className={`py-4 font-medium ${premium >= 0 ? 'text-primary' : 'text-chart-5'}`}>
                         {premium > 0 ? '+' : ''}{premium}%
                       </td>

@@ -23,7 +23,7 @@ function isCluster(value: unknown): value is Cluster {
 
 export default function DashboardPage() {
   const {
-    state: { herds, listings, sales, wallet },
+    state: { herds, listings, sales, wallet, platform },
     portfolioSummary,
     claimDividends,
   } = useDemoState()
@@ -71,8 +71,8 @@ export default function DashboardPage() {
   }, [wallet.connected, connectedWalletAddress])
 
   const totalHerdSize = herds.reduce((sum, herd) => sum + herd.herdSize, 0)
-  const totalTokens = herds.reduce((sum, herd) => sum + herd.totalTokens, 0)
-  const averageNav = herds.reduce((sum, herd) => sum + herd.navPerTokenUsd, 0) / herds.length
+  const totalTokens = platform.totalSupply
+  const averageNav = platform.navPerTokenUsd
   const topListings = [...listings].sort((left, right) => left.pricePerTokenUsd - right.pricePerTokenUsd).slice(0, 3)
   const latestSales = sales.slice(0, 3)
 
@@ -162,22 +162,22 @@ export default function DashboardPage() {
           icon={Users}
         />
         <StatCard
-          title="Total Token Supply"
+          title="Platform Token Supply"
           value={formatNumber(totalTokens)}
-          change="SPL herd shares minted"
+          change="PlatformToken (MCHAIN) supply"
           changeType="neutral"
           icon={Coins}
         />
         <StatCard
-          title="Average NAV"
+          title="Platform NAV"
           value={formatCurrency(averageNav)}
-          change="Blended platform entry price"
+          change="Platform-wide entry price"
           changeType="positive"
           icon={TrendingUp}
         />
         <StatCard
           title="Your Token Balance"
-          value={formatNumber(portfolioSummary.totalTokensOwned)}
+          value={formatNumber(portfolioSummary.userPlatformTokens)}
           change={wallet.connected ? 'Tracked from connected wallet' : 'Connect wallet to trade and claim'}
           changeType={wallet.connected ? 'positive' : 'neutral'}
           icon={Wallet}

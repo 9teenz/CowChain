@@ -1,3 +1,5 @@
+'use client'
+
 import Link from 'next/link'
 import { TrendingUp, Users, DollarSign, ArrowUpRight, ArrowDownRight } from 'lucide-react'
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
@@ -5,15 +7,18 @@ import { Button } from '@/components/ui/button'
 import { Progress } from '@/components/ui/progress'
 import { formatNumber, formatCurrency } from '@/lib/utils'
 import type { HerdPool } from '@/lib/demo-data'
+import { PLATFORM_TOKEN_SYMBOL } from '@/lib/demo-data'
 import { listingPremiumPct } from '@/lib/solana-contract'
+import { useDemoState } from '@/components/demo-state-provider'
 
 interface HerdCardProps {
   herd: HerdPool
 }
 
 export function HerdCard({ herd }: HerdCardProps) {
-  const soldPercent = ((herd.totalTokens - herd.availableDirectTokens) / herd.totalTokens) * 100
-  const premiumPct = listingPremiumPct(herd.marketPriceUsd, herd.navPerTokenUsd)
+  const { state: { platform } } = useDemoState()
+  const navPrice = platform.navPerTokenUsd
+  const premiumPct = listingPremiumPct(herd.marketPriceUsd, navPrice)
   const premiumPositive = premiumPct >= 0
 
   return (
@@ -25,7 +30,7 @@ export function HerdCard({ herd }: HerdCardProps) {
             <p className="mt-1 text-sm text-muted-foreground">{herd.location}</p>
           </div>
           <div className="rounded-full border border-border px-3 py-1 text-xs font-semibold text-muted-foreground">
-            {herd.tokenSymbol}
+            {PLATFORM_TOKEN_SYMBOL}
           </div>
         </div>
       </CardHeader>
@@ -68,25 +73,13 @@ export function HerdCard({ herd }: HerdCardProps) {
 
         <div className="grid gap-3 rounded-lg border border-primary/20 bg-primary/5 p-3 sm:grid-cols-2">
           <div>
-            <p className="text-xs text-muted-foreground">NAV</p>
-            <p className="text-lg font-bold text-primary">{formatCurrency(herd.navPerTokenUsd)}</p>
+            <p className="text-xs text-muted-foreground">NAV (CowChain)</p>
+            <p className="text-lg font-bold text-primary">{formatCurrency(navPrice)}</p>
           </div>
           <div>
             <p className="text-xs text-muted-foreground">Market Price</p>
             <p className="text-lg font-bold">{formatCurrency(herd.marketPriceUsd)}</p>
           </div>
-        </div>
-
-        {/* Token Progress */}
-        <div className="space-y-2">
-          <div className="flex items-center justify-between text-sm">
-            <span className="text-muted-foreground">Platform inventory sold</span>
-            <span className="font-medium">{soldPercent.toFixed(0)}%</span>
-          </div>
-          <Progress value={soldPercent} className="h-2" />
-          <p className="text-xs text-muted-foreground">
-            {formatNumber(herd.totalTokens - herd.availableDirectTokens)} / {formatNumber(herd.totalTokens)} tokens
-          </p>
         </div>
       </CardContent>
       <CardFooter className="gap-2 pt-2">

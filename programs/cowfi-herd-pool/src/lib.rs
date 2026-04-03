@@ -9,10 +9,14 @@ const DIVIDEND_SCALE: u128 = 1_000_000_000_000;
 pub mod cowfi_herd_pool {
     use super::*;
 
-    pub fn initialize_platform(ctx: Context<InitializePlatform>) -> Result<()> {
+    pub fn initialize_platform(ctx: Context<InitializePlatform>, total_supply: u64) -> Result<()> {
+        require!(total_supply > 0, HerdError::InvalidTokenAmount);
         let platform = &mut ctx.accounts.platform;
         platform.authority = ctx.accounts.authority.key();
         platform.quote_mint = ctx.accounts.quote_mint.key();
+        platform.platform_mint = ctx.accounts.platform_mint.key();
+        platform.total_token_supply = total_supply;
+        platform.circulating_tokens = 0;
         platform.bump = ctx.bumps.platform;
         Ok(())
     }
@@ -20,20 +24,15 @@ pub mod cowfi_herd_pool {
     pub fn initialize_herd_pool(
         ctx: Context<InitializeHerdPool>,
         name: String,
-        total_tokens: u64,
         nav_per_token_e6: u64,
     ) -> Result<()> {
         require!(name.len() <= 64, HerdError::NameTooLong);
-        require!(total_tokens > 0, HerdError::InvalidTokenAmount);
 
         let herd_pool = &mut ctx.accounts.herd_pool;
         herd_pool.platform = ctx.accounts.platform.key();
         herd_pool.authority = ctx.accounts.authority.key();
-        herd_pool.mint = ctx.accounts.herd_mint.key();
         herd_pool.quote_vault = ctx.accounts.quote_vault.key();
         herd_pool.name = name;
-        herd_pool.total_tokens = total_tokens;
-        herd_pool.circulating_tokens = 0;
         herd_pool.nav_per_token_e6 = nav_per_token_e6;
         herd_pool.total_dividends_distributed_e6 = 0;
         herd_pool.cumulative_dividend_per_token = 0;
@@ -63,21 +62,22 @@ pub mod cowfi_herd_pool {
             quote_cost,
         )?;
 
+        let platform = &mut ctx.accounts.platform;
         let mint_accounts = MintTo {
-            mint: ctx.accounts.herd_mint.to_account_info(),
-            to: ctx.accounts.buyer_herd_account.to_account_info(),
-            authority: ctx.accounts.herd_pool.to_account_info(),
+            mint: ctx.accounts.platform_mint.to_account_info(),
+            to: ctx.accounts.buyer_platform_account.to_account_info(),
+            authority: platform.to_account_info(),
         };
         token::mint_to(
             CpiContext::new_with_signer(
                 ctx.accounts.token_program.to_account_info(),
                 mint_accounts,
-                &[herd_pool_signer_seeds(herd_pool)],
+                &[platform_signer_seeds(platform)],
             ),
             token_amount,
         )?;
 
-        herd_pool.circulating_tokens = herd_pool
+        platform.circulating_tokens = platform
             .circulating_tokens
             .checked_add(token_amount)
             .ok_or(HerdError::MathOverflow)?;
@@ -107,8 +107,8 @@ pub mod cowfi_herd_pool {
         require!(position.available_tokens() >= token_amount, HerdError::InsufficientPosition);
 
         let transfer_accounts = Transfer {
-            from: ctx.accounts.seller_herd_account.to_account_info(),
-            to: ctx.accounts.escrow_herd_account.to_account_info(),
+            from: ctx.accounts.seller_platform_account.to_account_info(),
+            to: ctx.accounts.escrow_platform_account.to_account_info(),
             authority: ctx.accounts.seller.to_account_info(),
         };
         token::transfer(
@@ -159,8 +159,8 @@ pub mod cowfi_herd_pool {
         )?;
 
         let herd_transfer = Transfer {
-            from: ctx.accounts.escrow_herd_account.to_account_info(),
-            to: ctx.accounts.buyer_herd_account.to_account_info(),
+            from: ctx.accounts.escrow_platform_account.to_account_info(),
+            to: ctx.accounts.buyer_platform_account.to_account_info(),
             authority: ctx.accounts.listing.to_account_info(),
         };
         token::transfer(
@@ -204,11 +204,12 @@ pub mod cowfi_herd_pool {
     ) -> Result<()> {
         require!(sale_price_e6 > 0, HerdError::InvalidSalePrice);
 
+        let platform_total = ctx.accounts.platform.total_token_supply;
         let herd_pool = &mut ctx.accounts.herd_pool;
         let per_token_dividend = (sale_price_e6 as u128)
             .checked_mul(DIVIDEND_SCALE)
             .ok_or(HerdError::MathOverflow)?
-            .checked_div(herd_pool.total_tokens as u128)
+            .checked_div(platform_total as u128)
             .ok_or(HerdError::MathOverflow)?;
 
         herd_pool.cumulative_dividend_per_token = herd_pool
@@ -217,7 +218,7 @@ pub mod cowfi_herd_pool {
             .ok_or(HerdError::MathOverflow)?;
 
         let theoretical_drop = sale_price_e6
-            .checked_div(herd_pool.total_tokens)
+            .checked_div(platform_total)
             .ok_or(HerdError::MathOverflow)?;
         let buffered_drop = (theoretical_drop as u128)
             .checked_mul(nav_repricing_bps as u128)
@@ -289,6 +290,10 @@ fn accrue_dividends(herd_pool: &HerdPool, position: &mut InvestorPosition) -> Re
     Ok(())
 }
 
+fn platform_signer_seeds<'a>(platform: &'a Platform) -> [&'a [u8]; 2] {
+    [b"platform", &[platform.bump]]
+}
+
 fn herd_pool_signer_seeds<'a>(herd_pool: &'a HerdPool) -> [&'a [u8]; 3] {
     [b"herd-pool", herd_pool.name.as_bytes(), &[herd_pool.bump]]
 }
@@ -302,6 +307,7 @@ pub struct InitializePlatform<'info> {
     #[account(mut)]
     pub authority: Signer<'info>,
     pub quote_mint: Account<'info, Mint>,
+    pub platform_mint: Account<'info, Mint>,
     #[account(
         init,
         payer = authority,
@@ -320,7 +326,6 @@ pub struct InitializeHerdPool<'info> {
     pub authority: Signer<'info>,
     #[account(mut, seeds = [b"platform"], bump = platform.bump)]
     pub platform: Account<'info, Platform>,
-    pub herd_mint: Account<'info, Mint>,
     #[account(mut)]
     pub quote_vault: Account<'info, TokenAccount>,
     #[account(
@@ -340,14 +345,16 @@ pub struct BuyTokensAtNav<'info> {
     pub buyer: Signer<'info>,
     #[account(mut)]
     pub herd_pool: Account<'info, HerdPool>,
+    #[account(mut, seeds = [b"platform"], bump = platform.bump)]
+    pub platform: Account<'info, Platform>,
     #[account(mut)]
-    pub herd_mint: Account<'info, Mint>,
+    pub platform_mint: Account<'info, Mint>,
     #[account(mut)]
     pub quote_vault: Account<'info, TokenAccount>,
     #[account(mut)]
     pub buyer_quote_account: Account<'info, TokenAccount>,
     #[account(mut)]
-    pub buyer_herd_account: Account<'info, TokenAccount>,
+    pub buyer_platform_account: Account<'info, TokenAccount>,
     #[account(
         init_if_needed,
         payer = buyer,
@@ -367,9 +374,9 @@ pub struct CreateListing<'info> {
     #[account(mut)]
     pub herd_pool: Account<'info, HerdPool>,
     #[account(mut)]
-    pub seller_herd_account: Account<'info, TokenAccount>,
+    pub seller_platform_account: Account<'info, TokenAccount>,
     #[account(mut)]
-    pub escrow_herd_account: Account<'info, TokenAccount>,
+    pub escrow_platform_account: Account<'info, TokenAccount>,
     #[account(
         mut,
         seeds = [b"position", herd_pool.key().as_ref(), seller.key().as_ref()],
@@ -401,9 +408,9 @@ pub struct PurchaseListing<'info> {
     #[account(mut)]
     pub seller_quote_account: Account<'info, TokenAccount>,
     #[account(mut)]
-    pub escrow_herd_account: Account<'info, TokenAccount>,
+    pub escrow_platform_account: Account<'info, TokenAccount>,
     #[account(mut)]
-    pub buyer_herd_account: Account<'info, TokenAccount>,
+    pub buyer_platform_account: Account<'info, TokenAccount>,
     #[account(
         mut,
         seeds = [b"position", herd_pool.key().as_ref(), listing.seller.as_ref()],
@@ -427,6 +434,8 @@ pub struct RecordCowSale<'info> {
     pub authority: Signer<'info>,
     #[account(mut, has_one = authority)]
     pub herd_pool: Account<'info, HerdPool>,
+    #[account(seeds = [b"platform"], bump = platform.bump)]
+    pub platform: Account<'info, Platform>,
 }
 
 #[derive(Accounts)]
@@ -454,6 +463,9 @@ pub struct ClaimDividends<'info> {
 pub struct Platform {
     pub authority: Pubkey,
     pub quote_mint: Pubkey,
+    pub platform_mint: Pubkey,
+    pub total_token_supply: u64,
+    pub circulating_tokens: u64,
     pub bump: u8,
 }
 
@@ -462,12 +474,9 @@ pub struct Platform {
 pub struct HerdPool {
     pub platform: Pubkey,
     pub authority: Pubkey,
-    pub mint: Pubkey,
     pub quote_vault: Pubkey,
     #[max_len(64)]
     pub name: String,
-    pub total_tokens: u64,
-    pub circulating_tokens: u64,
     pub nav_per_token_e6: u64,
     pub total_dividends_distributed_e6: u64,
     pub cumulative_dividend_per_token: u128,

@@ -1,5 +1,17 @@
 import type { SettlementCurrency } from '@/lib/solana-contract'
 
+export const PLATFORM_TOKEN_MINT = 'PtFmCoWcHaiN111111111111111111111111111'   
+export const PLATFORM_TOKEN_SYMBOL = 'CowChain'
+
+export interface PlatformToken {
+  mint: string
+  symbol: string
+  totalSupply: number
+  availableTokens: number
+  navPerTokenUsd: number
+  marketPriceUsd: number
+}
+
 export type WalletProviderName = 'Phantom' | 'Solflare' | 'Backpack'
 
 export interface DemoWallet {
@@ -14,7 +26,6 @@ export interface DemoWallet {
 export interface HerdPool {
   id: string
   name: string
-  tokenSymbol: string
   location: string
   description: string
   herdSize: number
@@ -24,8 +35,6 @@ export interface HerdPool {
   totalValueUsd: number
   navPerTokenUsd: number
   marketPriceUsd: number
-  totalTokens: number
-  availableDirectTokens: number
   projectedYieldPct: number
   healthStatus: 'Prime' | 'Strong' | 'Watch'
   totalDividendsDistributedUsd: number
@@ -81,6 +90,7 @@ export interface TimeSeriesPoint {
 
 export interface DemoState {
   wallet: DemoWallet
+  platform: PlatformToken
   herds: HerdPool[]
   positions: UserPosition[]
   listings: MarketplaceListing[]
@@ -101,11 +111,18 @@ export const initialDemoState: DemoState = {
     stablecoinBalance: 18640,
     preferredDividendCurrency: 'USDC',
   },
+  platform: {
+    mint: PLATFORM_TOKEN_MINT,
+    symbol: PLATFORM_TOKEN_SYMBOL,
+    totalSupply: 310000,
+    availableTokens: 75400,
+    navPerTokenUsd: 1.106,
+    marketPriceUsd: 1.08,
+  },
   herds: [
     {
       id: 'alpine-meadow',
       name: 'Alpine Meadow Herd',
-      tokenSymbol: 'ALPACA',
       location: 'Vermont, USA',
       description: 'Premium dairy herd with high milk output, low disease incidents, and consistent offtake contracts.',
       herdSize: 52,
@@ -115,8 +132,6 @@ export const initialDemoState: DemoState = {
       totalValueUsd: 61200,
       navPerTokenUsd: 1.02,
       marketPriceUsd: 1.08,
-      totalTokens: 60000,
-      availableDirectTokens: 18500,
       projectedYieldPct: 18.4,
       healthStatus: 'Prime',
       totalDividendsDistributedUsd: 4820,
@@ -124,7 +139,6 @@ export const initialDemoState: DemoState = {
     {
       id: 'sunrise-valley',
       name: 'Sunrise Valley Farm',
-      tokenSymbol: 'SUNMILK',
       location: 'Wisconsin, USA',
       description: 'Large-volume herd pool with strong operating efficiency and long-running regional processor demand.',
       herdSize: 118,
@@ -134,8 +148,6 @@ export const initialDemoState: DemoState = {
       totalValueUsd: 139200,
       navPerTokenUsd: 1.16,
       marketPriceUsd: 1.13,
-      totalTokens: 120000,
-      availableDirectTokens: 24000,
       projectedYieldPct: 16.9,
       healthStatus: 'Strong',
       totalDividendsDistributedUsd: 9630,
@@ -143,7 +155,6 @@ export const initialDemoState: DemoState = {
     {
       id: 'green-pastures',
       name: 'Green Pastures Co-op',
-      tokenSymbol: 'GRNPST',
       location: 'Oregon, USA',
       description: 'Mid-sized co-op with above-market milk pricing and strong member reinvestment into herd genetics.',
       herdSize: 81,
@@ -153,8 +164,6 @@ export const initialDemoState: DemoState = {
       totalValueUsd: 91500,
       navPerTokenUsd: 1.11,
       marketPriceUsd: 1.18,
-      totalTokens: 80000,
-      availableDirectTokens: 20800,
       projectedYieldPct: 19.7,
       healthStatus: 'Prime',
       totalDividendsDistributedUsd: 5380,
@@ -162,7 +171,6 @@ export const initialDemoState: DemoState = {
     {
       id: 'coastal-breeze',
       name: 'Coastal Breeze Farm',
-      tokenSymbol: 'BRZCOW',
       location: 'California, USA',
       description: 'Smaller coastal herd with premium organic positioning and more volatile but higher upside secondary pricing.',
       herdSize: 47,
@@ -172,8 +180,6 @@ export const initialDemoState: DemoState = {
       totalValueUsd: 56400,
       navPerTokenUsd: 1.07,
       marketPriceUsd: 1.14,
-      totalTokens: 50000,
-      availableDirectTokens: 12100,
       projectedYieldPct: 20.6,
       healthStatus: 'Watch',
       totalDividendsDistributedUsd: 2710,
