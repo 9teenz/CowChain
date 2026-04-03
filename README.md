@@ -63,3 +63,36 @@ EMAIL_FROM="CowFi <no-reply@cowfi.local>"
 
 Unauthenticated access to these routes is redirected to `/login?next=<path>`.
 
+## Automated tests
+
+Install browsers once for Playwright:
+
+```bash
+npx playwright install chromium
+```
+
+Run all unit, component, and API integration tests:
+
+```bash
+npm run test
+```
+
+Run scoped suites:
+
+```bash
+npm run test:unit
+npm run test:api
+```
+
+Run end-to-end smoke tests:
+
+```bash
+npm run test:e2e
+```
+
+Generate coverage report:
+
+```bash
+npm run test:coverage
+```
+
