@@ -61,14 +61,6 @@ interface ModalState {
   herdId: string
 }
 
-function healthBadgeClass(health: 'Prime' | 'Strong' | 'Watch') {
-  return {
-    Prime: 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20 dark:text-emerald-400',
-    Strong: 'bg-sky-500/10 text-sky-600 border-sky-500/20 dark:text-sky-400',
-    Watch: 'bg-amber-500/10 text-amber-600 border-amber-500/20 dark:text-amber-400',
-  }[health]
-}
-
 function activityIcon(kind: string) {
   switch (kind) {
     case 'cow-sale':   return <ArrowUpRight className="h-4 w-4 text-amber-500" />
@@ -132,6 +124,11 @@ export default function FarmerProfilePage() {
     const herd = herds.find((h) => h.id === herdId)
     if (herd) setMilkRevenue(String(herd.expectedAnnualRevenueUsd))
     setModal({ kind, herdId })
+    if (kind === 'pay-dividends') {
+      const result = claimDividends(wallet.preferredDividendCurrency)
+      setFeedback({ ok: result.ok, msg: result.message })
+      if (result.ok) window.setTimeout(closeModal, 1800)
+    }
   }
 
   const closeModal = () => setModal({ kind: null, herdId: '' })
@@ -183,6 +180,10 @@ export default function FarmerProfilePage() {
                 </Badge>
                 <Badge variant="secondary">{herds.length} {herds.length === 1 ? 'farm' : 'farms'}</Badge>
               </div>
+              <p className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                <Users className="h-3.5 w-3.5" />
+                {formatNumber(investorCount)} investors
+              </p>
 
               <div className="flex flex-wrap gap-3 text-sm">
                 <div className="flex items-center gap-2 rounded-lg bg-muted px-3 py-1.5">
@@ -273,18 +274,11 @@ export default function FarmerProfilePage() {
             {herds.map((herd) => (
               <Card key={herd.id} className="flex flex-col overflow-hidden transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md">
                 <CardHeader className="pb-3">
-                  <div className="flex items-start justify-between gap-2">
-                    <div>
-                      <CardTitle className="text-base">{herd.name}</CardTitle>
-                      <CardDescription className="text-xs">{herd.location}</CardDescription>
-                    </div>
-                    <span className={`rounded-full border px-2 py-0.5 text-xs font-medium ${healthBadgeClass(herd.healthStatus)}`}>
-                      {herd.healthStatus}
-                    </span>
-                  </div>
+                  <CardTitle className="text-base">{herd.name}</CardTitle>
+                  <CardDescription className="text-xs">{herd.location}</CardDescription>
                 </CardHeader>
                 <CardContent className="flex flex-1 flex-col gap-4">
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-3 gap-3">
                     <div className="rounded-lg bg-muted/50 p-3">
                       <p className="text-xs text-muted-foreground">Cows</p>
                       <p className="text-lg font-bold">{formatNumber(herd.herdSize)}</p>
@@ -296,10 +290,6 @@ export default function FarmerProfilePage() {
                     <div className="rounded-lg bg-muted/50 p-3">
                       <p className="text-xs text-muted-foreground">Milk / year</p>
                       <p className="text-lg font-bold">{formatCurrency(herd.expectedAnnualRevenueUsd)}</p>
-                    </div>
-                    <div className="rounded-lg bg-muted/50 p-3">
-                      <p className="text-xs text-muted-foreground">Dividends paid</p>
-                      <p className="text-lg font-bold">{formatCurrency(herd.totalDividendsDistributedUsd)}</p>
                     </div>
                   </div>
 
@@ -326,11 +316,8 @@ export default function FarmerProfilePage() {
                     <Button variant="outline" size="sm" className="gap-1 text-xs" onClick={() => openModal('sell-cow', herd.id)}>
                       <ArrowUpRight className="h-3 w-3" /> Sell Cow
                     </Button>
-                    <Button variant="outline" size="sm" className="gap-1 text-xs" onClick={() => openModal('update-revenue', herd.id)}>
+                    <Button variant="outline" size="sm" className="gap-1 text-xs col-span-2" onClick={() => openModal('update-revenue', herd.id)}>
                       <RefreshCw className="h-3 w-3" /> Update Revenue
-                    </Button>
-                    <Button variant="default" size="sm" className="gap-1 text-xs" onClick={() => openModal('pay-dividends', herd.id)}>
-                      <Banknote className="h-3 w-3" /> Pay Out
                     </Button>
                   </div>
                 </CardContent>
@@ -573,17 +560,55 @@ export default function FarmerProfilePage() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Pay Dividends</DialogTitle>
-            <DialogDescription>All pending dividends will be distributed to investors in {wallet.preferredDividendCurrency}.</DialogDescription>
+            <DialogDescription>
+              {herds.find((h) => h.id === modal.herdId)?.name} &middot; payout in {wallet.preferredDividendCurrency}
+            </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
-            <div className="rounded-lg bg-muted p-4 text-sm">
-              <p className="text-muted-foreground">Total payout</p>
-              <p className="text-2xl font-bold">{formatCurrency(positions.reduce((s, p) => s + p.pendingDividendsUsd, 0))}</p>
-            </div>
+            {(() => {
+              const herd = herds.find((h) => h.id === modal.herdId)
+              const herdPositions = positions.filter((p) => p.herdId === modal.herdId)
+              const totalPending = herdPositions.reduce((s, p) => s + p.pendingDividendsUsd, 0)
+              return (
+                <>
+                  <div className="rounded-lg bg-muted p-4 text-sm">
+                    <p className="text-muted-foreground">Total payout</p>
+                    <p className="text-2xl font-bold">{formatCurrency(totalPending)}</p>
+                  </div>
+                  {herd && herdPositions.length > 0 && (
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-xs">
+                        <thead>
+                          <tr className="border-b border-border text-left text-muted-foreground">
+                            <th className="pb-2 font-medium">Farm</th>
+                            <th className="pb-2 font-medium">Tokens</th>
+                            <th className="pb-2 font-medium">Share</th>
+                            <th className="pb-2 font-medium">Payout</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {herdPositions.map((pos) => {
+                            const share = herd.totalTokens > 0 ? pos.tokensOwned / herd.totalTokens : 0
+                            const payout = totalPending * share
+                            return (
+                              <tr key={pos.herdId} className="border-b border-border last:border-0">
+                                <td className="py-2 font-medium">{pos.herdName}</td>
+                                <td className="py-2">{formatNumber(pos.tokensOwned)}</td>
+                                <td className="py-2 text-muted-foreground">{(share * 100).toFixed(1)}%</td>
+                                <td className="py-2 font-semibold text-emerald-600 dark:text-emerald-400">{formatCurrency(payout)}</td>
+                              </tr>
+                            )
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </>
+              )
+            })()}
             {feedback && <p className={`text-sm ${feedback.ok ? 'text-emerald-600 dark:text-emerald-400' : 'text-destructive'}`}>{feedback.msg}</p>}
-            <div className="flex justify-end gap-2">
-              <Button variant="outline" onClick={closeModal}>Cancel</Button>
-              <Button onClick={handlePayDividends}>Pay Out</Button>
+            <div className="flex justify-end">
+              <Button variant="outline" onClick={closeModal}>Close</Button>
             </div>
           </div>
         </DialogContent>
