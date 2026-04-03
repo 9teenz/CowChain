@@ -126,7 +126,7 @@ export default function SignupPage() {
           <div>
             <CardTitle className="text-2xl">Create an account</CardTitle>
             <CardDescription>
-              Join CowFi and start investing in real-world livestock assets
+              Join CowChain and start investing in real-world livestock assets
             </CardDescription>
           </div>
         </CardHeader>

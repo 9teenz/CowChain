@@ -91,7 +91,7 @@ export default function DashboardPage() {
                 Tokenize herd ownership, trade it peer-to-peer, and stream cow-sale dividends to wallets.
               </h1>
               <p className="max-w-2xl text-base text-white/75 sm:text-lg">
-                CowFi models a Solana herd pool where each SPL token is a fractional claim on a cow collective. Buy at NAV, fill market orders above or below NAV, and claim dividends the moment the farm exits livestock.
+                CowChain models a Solana herd pool where each SPL token is a fractional claim on a cow collective. Buy at NAV, fill market orders above or below NAV, and claim dividends the moment the farm exits livestock.
               </p>
             </div>
             <div className="flex flex-wrap gap-3">

@@ -92,7 +92,7 @@ export function Navbar() {
             <div className="flex h-9 w-9 items-center justify-center">
               <CowIcon className="h-8 w-8" />
             </div>
-            <span className="text-xl font-bold text-foreground">CowFi</span>
+            <span className="text-xl font-bold text-foreground">CowChain</span>
           </Link>
 
           {/* Desktop Navigation */}

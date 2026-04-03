@@ -23,7 +23,7 @@ import type {
 } from '@/lib/demo-data'
 import { initialDemoState, PLATFORM_TOKEN_SYMBOL } from '@/lib/demo-data'
 
-const STORAGE_KEY = 'cowfi-demo-state'
+const STORAGE_KEY = 'cowchain-demo-state'
 
 type ActionResult = {
   ok: boolean
@@ -177,7 +177,7 @@ export function DemoStateProvider({ children }: { children: ReactNode }) {
 
     return {
       ok: true,
-      message: `${provider} connected to CowFi demo`,
+      message: `${provider} connected to CowChain demo`,
     }
   }
 

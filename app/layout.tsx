@@ -12,7 +12,7 @@ const _geist = Geist({ subsets: ['latin'] })
 const _geistMono = Geist_Mono({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
-  title: 'CowFi - Real World Asset Investment Platform',
+  title: 'CowChain - Real World Asset Investment Platform',
   description: 'Invest in fractional ownership of livestock herds and earn yield from milk production',
   generator: 'v0.app',
   icons: {

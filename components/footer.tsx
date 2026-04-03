@@ -35,7 +35,7 @@ export function Footer() {
           <div className="lg:col-span-1">
             <Link href="/" className="flex items-center gap-2">
               <CowIcon className="h-8 w-8" />
-              <span className="text-xl font-bold text-foreground">CowFi</span>
+              <span className="text-xl font-bold text-foreground">CowChain</span>
             </Link>
             <p className="mt-4 text-sm text-muted-foreground">
               Tokenize herd pools, trade SPL herd shares, and stream dividends after each cow sale.
@@ -136,7 +136,7 @@ export function Footer() {
         {/* Bottom Section */}
         <div className="mt-12 flex flex-col items-center justify-between gap-4 border-t border-border pt-8 md:flex-row">
           <p className="text-sm text-muted-foreground">
-            &copy; 2026 CowFi. All rights reserved.
+            &copy; 2026 CowChain. All rights reserved.
           </p>
           <div className="flex items-center gap-6">
             <span className="text-sm text-muted-foreground">QuadCore Solutions</span>

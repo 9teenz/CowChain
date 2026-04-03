@@ -1,12 +1,12 @@
 use anchor_lang::prelude::*;
 use anchor_spl::token::{self, Mint, MintTo, Token, TokenAccount, Transfer};
 
-declare_id!("CowFi1111111111111111111111111111111111111");
+declare_id!("CowChain111111111111111111111111111111111111");
 
 const DIVIDEND_SCALE: u128 = 1_000_000_000_000;
 
 #[program]
-pub mod cowfi_herd_pool {
+pub mod cowchain_herd_pool {
     use super::*;
 
     pub fn initialize_platform(ctx: Context<InitializePlatform>, total_supply: u64) -> Result<()> {
