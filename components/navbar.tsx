@@ -132,6 +132,19 @@ export function Navbar() {
               </Button>
             )}
 
+            {/* Farmer Dashboard Link */}
+            <Button
+              variant={pathname === '/farmer' ? 'default' : 'outline'}
+              size="sm"
+              asChild
+              className="hidden items-center gap-1.5 sm:flex"
+            >
+              <Link href="/farmer">
+                <CowIcon className="h-4 w-4" />
+                <span className="text-sm font-medium">Farmer</span>
+              </Link>
+            </Button>
+
             {/* Profile Link */}
             <Button variant="ghost" size="icon" asChild className="hidden sm:flex">
               <Link href={isAuthenticated ? '/profile' : '/signup'}>
@@ -232,6 +245,19 @@ export function Navbar() {
                   {link.label}
                 </Link>
               ))}
+              <Link
+                href="/farmer"
+                onClick={() => setMobileMenuOpen(false)}
+                className={cn(
+                  'flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-colors',
+                  pathname === '/farmer'
+                    ? 'bg-accent text-accent-foreground'
+                    : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
+                )}
+              >
+                <CowIcon className="h-4 w-4" />
+                Farmer
+              </Link>
               <Link
                 href="/profile"
                 onClick={() => setMobileMenuOpen(false)}

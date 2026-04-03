@@ -43,6 +43,8 @@ interface DemoStateContextValue {
   buyListing: (listingId: string, tokenAmount: number) => ActionResult
   claimDividends: (currency: BuyCurrency) => ActionResult
   simulateCowSale: (herdId: string, salePriceUsd: number, currency: BuyCurrency) => ActionResult
+  addCowsToHerd: (herdId: string, count: number, costPerCowUsd: number) => ActionResult
+  updateMilkRevenue: (herdId: string, newAnnualRevenueUsd: number) => ActionResult
   portfolioSummary: {
     totalTokensOwned: number
     totalHerdShares: number
@@ -611,6 +613,57 @@ export function DemoStateProvider({ children }: { children: ReactNode }) {
     }
   }
 
+  const addCowsToHerd = (herdId: string, count: number, costPerCowUsd: number): ActionResult => {
+    if (count <= 0 || costPerCowUsd <= 0) {
+      return { ok: false, message: 'Count and cost per cow must be positive.' }
+    }
+
+    const herd = state.herds.find((item) => item.id === herdId)
+    if (!herd) {
+      return { ok: false, message: 'Herd not found.' }
+    }
+
+    const totalCostUsd = count * costPerCowUsd
+
+    setState((current) => ({
+      ...current,
+      herds: current.herds.map((item) =>
+        item.id === herdId
+          ? {
+              ...item,
+              herdSize: item.herdSize + count,
+              totalValueUsd: Number((item.totalValueUsd + totalCostUsd).toFixed(2)),
+              navPerTokenUsd: Number(((item.totalValueUsd + totalCostUsd) / item.totalTokens).toFixed(4)),
+            }
+          : item
+      ),
+    }))
+
+    return { ok: true, message: `${count} cow(s) added to ${herd.name}. NAV updated.` }
+  }
+
+  const updateMilkRevenue = (herdId: string, newAnnualRevenueUsd: number): ActionResult => {
+    if (newAnnualRevenueUsd <= 0) {
+      return { ok: false, message: 'Annual revenue must be positive.' }
+    }
+
+    const herd = state.herds.find((item) => item.id === herdId)
+    if (!herd) {
+      return { ok: false, message: 'Herd not found.' }
+    }
+
+    setState((current) => ({
+      ...current,
+      herds: current.herds.map((item) =>
+        item.id === herdId
+          ? { ...item, expectedAnnualRevenueUsd: Number(newAnnualRevenueUsd.toFixed(2)) }
+          : item
+      ),
+    }))
+
+    return { ok: true, message: `Milk revenue updated for ${herd.name}.` }
+  }
+
   const portfolioSummary = useMemo(() => {
     const totalTokensOwned = state.positions.reduce((sum, position) => sum + position.tokensOwned, 0)
 
@@ -662,6 +715,8 @@ export function DemoStateProvider({ children }: { children: ReactNode }) {
       buyListing,
       claimDividends,
       simulateCowSale,
+      addCowsToHerd,
+      updateMilkRevenue,
       portfolioSummary,
     }),
     [isHydrated, state, portfolioSummary]
