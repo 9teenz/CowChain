@@ -1,53 +1,35 @@
-# MilkChain
+# CowFi
 
-## Auth stack
+## Стек аутентификации
 
-- NextAuth (JWT session in httpOnly cookies)
-- Prisma + SQLite for local development
-- OAuth providers: Google and GitHub
-- Email verification via SMTP (Ethereal)
-- Wallet-only sign-in and wallet linking endpoint
+- NextAuth (JWT-сессия в httpOnly-куках)
+- Prisma + SQLite для локальной разработки
+- OAuth-провайдеры: Google и GitHub
+- Верификация email через SMTP (Ethereal)
+- Вход только по кошельку и эндпоинт привязки кошелька
 
-## Local setup
+## Локальная установка
 
-1. Install dependencies.
-2. Create environment file from example.
-3. Run Prisma generate and migration.
-4. Start dev server.
+1. Установить зависимости.
+2. Создать файл переменных окружения из примера.
+3. Запустить генерацию Prisma и миграцию.
+4. Запустить сервер разработки.
 
 ```bash
 npm install
-cp .env.example .env
 npm run prisma:generate
 npm run prisma:migrate
 npm run dev
 ```
 
-## Required environment variables
 
-```env
-DATABASE_URL="file:./dev.db"
-AUTH_SECRET="replace-with-long-random-secret"
-AUTH_URL="http://localhost:3000"
 
-GOOGLE_CLIENT_ID=""
-GOOGLE_CLIENT_SECRET=""
-GITHUB_ID=""
-GITHUB_SECRET=""
+## OAuth-коллбэки
 
-ETHEREAL_SMTP_HOST="smtp.ethereal.email"
-ETHEREAL_SMTP_PORT="587"
-ETHEREAL_SMTP_USER=""
-ETHEREAL_SMTP_PASS=""
-EMAIL_FROM="CowFi <no-reply@cowfi.local>"
-```
+- URL коллбэка Google: `http://localhost:3000/api/auth/callback/google`
+- URL коллбэка GitHub: `http://localhost:3000/api/auth/callback/github`
 
-## OAuth callbacks
-
-- Google callback URL: `http://localhost:3000/api/auth/callback/google`
-- GitHub callback URL: `http://localhost:3000/api/auth/callback/github`
-
-## Implemented auth endpoints
+## Реализованные эндпоинты аутентификации
 
 - `POST /api/auth/register`
 - `POST /api/auth/verify/request`
@@ -55,42 +37,42 @@ EMAIL_FROM="CowFi <no-reply@cowfi.local>"
 - `POST /api/wallet/link`
 - `GET|POST /api/auth/[...nextauth]`
 
-## Protected routes
+## Защищённые маршруты
 
 - `/profile/*`
 - `/portfolio/*`
 - `/herd/*`
 
-Unauthenticated access to these routes is redirected to `/login?next=<path>`.
 
-## Automated tests
 
-Install browsers once for Playwright:
+## Автоматизированные тесты
+
+Установить браузеры для Playwright:
 
 ```bash
 npx playwright install chromium
 ```
 
-Run all unit, component, and API integration tests:
+Запустить все юнит-, компонентные и интеграционные тесты API:
 
 ```bash
 npm run test
 ```
 
-Run scoped suites:
+Запустить отдельные наборы тестов:
 
 ```bash
 npm run test:unit
 npm run test:api
 ```
 
-Run end-to-end smoke tests:
+Запустить сквозные (e2e) тесты:
 
 ```bash
 npm run test:e2e
 ```
 
-Generate coverage report:
+Сгенерировать отчёт о покрытии:
 
 ```bash
 npm run test:coverage
