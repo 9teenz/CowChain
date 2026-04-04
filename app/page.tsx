@@ -9,7 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { useDemoState } from '@/components/demo-state-provider'
 import { formatCurrency, formatNumber } from '@/lib/utils'
 import { shortenWallet } from '@/lib/solana-contract'
-import { Wallet, TrendingUp, Coins, Users, Sparkles, RefreshCw } from 'lucide-react'
+import { Wallet, TrendingUp, Coins, Users, Sparkles, RefreshCw, ShoppingCart } from 'lucide-react'
 
 type Cluster = 'mainnet-beta' | 'devnet' | 'testnet'
 
@@ -185,6 +185,29 @@ export default function DashboardPage() {
           changeType={wallet.connected ? 'positive' : 'neutral'}
           icon={Wallet}
         />
+      </div>
+
+      <div className="mt-8 flex flex-col items-center gap-4 rounded-3xl border border-primary/30 bg-primary/5 px-6 py-10 text-center sm:px-12">
+        <div className="flex h-14 w-14 items-center justify-center rounded-full bg-primary/15">
+          <ShoppingCart className="h-7 w-7 text-primary" />
+        </div>
+        <div>
+          <h2 className="text-2xl font-bold tracking-tight sm:text-3xl">Buy CowChain Token</h2>
+          <p className="mt-2 max-w-xl text-muted-foreground">
+            Get fractional ownership in real dairy herds. Earn dividends from cow sales, trade peer-to-peer, and track performance on-chain.
+          </p>
+        </div>
+        <div className="flex flex-wrap justify-center gap-3">
+          <Button size="lg" className="px-10 text-base" asChild>
+            <Link href="/marketplace">Buy Now</Link>
+          </Button>
+          <Button size="lg" variant="outline" className="px-8 text-base" asChild>
+            <Link href="/portfolio">My Portfolio</Link>
+          </Button>
+        </div>
+        <p className="text-sm text-muted-foreground">
+          Current price: <span className="font-semibold text-foreground">{formatCurrency(platform.navPerTokenUsd)}</span> per token
+        </p>
       </div>
 
       <div className="mt-10 grid gap-6 lg:grid-cols-[1.3fr_0.9fr]">
