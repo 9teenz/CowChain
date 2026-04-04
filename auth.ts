@@ -5,7 +5,7 @@ import GitHub from 'next-auth/providers/github'
 import { PrismaAdapter } from '@auth/prisma-adapter'
 import { z } from 'zod'
 import { prisma } from '@/lib/prisma'
-import { verifyPassword } from '@/lib/auth-utils'
+import { verifyPassword, hashToken } from '@/lib/auth-utils'
 
 const authSecret = process.env.NEXTAUTH_SECRET || process.env.AUTH_SECRET
 
@@ -62,6 +62,7 @@ export const authOptions: NextAuthOptions = {
           id: user.id,
           email: user.email,
           name: user.name,
+          role: user.role,
         }
       },
     }),
@@ -94,6 +95,48 @@ export const authOptions: NextAuthOptions = {
           id: user.id,
           email: user.email,
           name: user.name,
+          role: user.role,
+        }
+      },
+    }),
+    Credentials({
+      id: 'verify-token',
+      name: 'VerifyToken',
+      credentials: {
+        token: { label: 'Token', type: 'text' },
+      },
+      async authorize(raw) {
+        if (!raw?.token) return null
+        
+        const tokenHash = hashToken(raw.token as string)
+        const verification = await prisma.emailVerificationToken.findUnique({
+          where: { tokenHash },
+        })
+
+        if (!verification) return null
+
+        const user = await prisma.user.findUnique({ where: { email: verification.email } })
+        if (!user) return null
+
+        // Mark as verified if not already
+        if (!user.emailVerified) {
+          await prisma.$transaction([
+            prisma.user.update({
+              where: { email: verification.email },
+              data: { emailVerified: new Date() },
+            }),
+            prisma.emailVerificationToken.update({
+              where: { id: verification.id },
+              data: { usedAt: new Date() },
+            }),
+          ])
+        }
+
+        return {
+          id: user.id,
+          email: user.email,
+          name: user.name,
+          role: user.role,
         }
       },
     }),
@@ -108,6 +151,7 @@ export const authOptions: NextAuthOptions = {
         const dbUser = await prisma.user.findUnique({ where: { id: token.sub } })
         token.emailVerified = !!dbUser?.emailVerified
         token.walletAddress = dbUser?.walletAddress || null
+        token.role = dbUser?.role || 'investor'
       }
 
       return token
@@ -117,6 +161,7 @@ export const authOptions: NextAuthOptions = {
         session.user.id = token.sub || ''
         session.user.emailVerified = !!token.emailVerified
         session.user.walletAddress = (token.walletAddress as string | null) || null
+        session.user.role = (token.role as string) || 'investor'
       }
       return session
     },

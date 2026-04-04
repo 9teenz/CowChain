@@ -16,6 +16,7 @@ model User {
   passwordHash  String?
   walletAddress String?   @unique
   walletProvider String?
+  role          String    @default("investor")
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 

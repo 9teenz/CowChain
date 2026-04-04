@@ -21,6 +21,7 @@ export default function SignupPage() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
+  const [role, setRole] = useState<'investor' | 'farmer'>('investor')
   const [message, setMessage] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
 
@@ -37,22 +38,21 @@ export default function SignupPage() {
       setIsLoading(true)
       setError(null)
 
-      const response = await fetch('/api/auth/verify/confirm', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ token: verifyToken }),
+      const result = await signIn('verify-token', {
+        token: verifyToken,
+        redirect: false,
       })
 
-      const data = (await response.json()) as { error?: string; message?: string }
       setIsLoading(false)
 
-      if (!response.ok) {
-        setError(data.error || 'Verification failed.')
+      if (result?.error) {
+        setError('Verification failed or token expired. Please try again or resend.')
         return
       }
 
-      setMessage(data.message || 'Email verified. You can now sign in.')
+      setMessage('Email verified. You are now logged in.')
       router.push('/profile')
+      router.refresh()
     }
 
     verifyEmail()
@@ -73,7 +73,7 @@ export default function SignupPage() {
     const response = await fetch('/api/auth/register', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name, email, password }),
+      body: JSON.stringify({ name, email, password, role }),
     })
 
     const data = (await response.json()) as { error?: string; message?: string }
@@ -266,6 +266,49 @@ export default function SignupPage() {
                     <Eye className="h-4 w-4" />
                   )}
                 </button>
+              </div>
+            </div>
+
+            {/* Role Selection */}
+            <div className="space-y-2">
+              <Label>Account Type</Label>
+              <div className="flex flex-col gap-2 rounded-lg border p-3 md:flex-row md:items-center">
+                <label className="flex flex-1 cursor-pointer items-center justify-between rounded-md border bg-background p-3 hover:bg-muted [&:has([data-state=checked])]:border-primary">
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="radio"
+                      name="role"
+                      value="investor"
+                      checked={role === 'investor'}
+                      onChange={() => setRole('investor')}
+                      className="sr-only"
+                      data-state={role === 'investor' ? 'checked' : 'unchecked'}
+                    />
+                    <div className="flex flex-col">
+                      <span className="font-medium text-sm">Investor</span>
+                      <span className="text-xs text-muted-foreground">Buy and manage assets</span>
+                    </div>
+                  </div>
+                  {role === 'investor' && <Check className="h-4 w-4 text-primary" />}
+                </label>
+                <label className="flex flex-1 cursor-pointer items-center justify-between rounded-md border bg-background p-3 hover:bg-muted [&:has([data-state=checked])]:border-primary">
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="radio"
+                      name="role"
+                      value="farmer"
+                      checked={role === 'farmer'}
+                      onChange={() => setRole('farmer')}
+                      className="sr-only"
+                      data-state={role === 'farmer' ? 'checked' : 'unchecked'}
+                    />
+                    <div className="flex flex-col">
+                      <span className="font-medium text-sm">Farmer <span className="text-xs text-primary">(KYC Required DEMO)</span></span>
+                      <span className="text-xs text-muted-foreground">List and manage herds</span>
+                    </div>
+                  </div>
+                  {role === 'farmer' && <Check className="h-4 w-4 text-primary" />}
+                </label>
               </div>
             </div>
 

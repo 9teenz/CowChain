@@ -50,7 +50,7 @@ export async function POST(request: Request) {
       }),
     ])
 
-    return NextResponse.json({ ok: true, message: 'Email verified. You can now sign in.' })
+    return NextResponse.json({ ok: true, email: verification.email, message: 'Email verified successfully.' })
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Failed to confirm verification.'
     return NextResponse.json({ error: message }, { status: 500 })

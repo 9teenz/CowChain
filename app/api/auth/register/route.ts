@@ -8,6 +8,7 @@ const bodySchema = z.object({
   name: z.string().trim().min(2).max(120).optional(),
   email: z.string().trim().email(),
   password: z.string().min(8, 'Password must be at least 8 characters.').max(128),
+  role: z.enum(['farmer', 'investor']).default('investor'),
 })
 
 export async function POST(request: Request) {
@@ -43,6 +44,7 @@ export async function POST(request: Request) {
         name,
         email,
         passwordHash,
+        role: parsed.data.role,
       },
     })
 
