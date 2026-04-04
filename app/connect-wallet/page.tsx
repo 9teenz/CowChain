@@ -52,8 +52,6 @@ export default function ConnectWalletPage() {
       return
     }
 
-    connectWallet('Phantom', walletAddress)
-
     // Keep current authenticated identity intact and only link the wallet.
     if (status === 'authenticated') {
       const linkResponse = await fetch('/api/wallet/link', {
@@ -73,6 +71,7 @@ export default function ConnectWalletPage() {
         return
       }
 
+      connectWallet('Phantom', walletAddress)
       router.push('/profile')
       router.refresh()
       return
@@ -91,6 +90,7 @@ export default function ConnectWalletPage() {
       return
     }
 
+    connectWallet('Phantom', walletAddress)
     router.push('/profile')
     router.refresh()
   }
