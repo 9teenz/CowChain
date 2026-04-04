@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useTheme } from 'next-themes'
 import { useSession } from 'next-auth/react'
-import { Sun, Moon, Wallet, Menu, X, User, Coins, RefreshCw } from 'lucide-react'
+import { Sun, Moon, Wallet, Menu, X, User, Coins, RefreshCw, ShieldCheck } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { cn } from '@/lib/utils'
@@ -147,6 +147,20 @@ export function Navbar() {
               </Button>
             )}
 
+            {(session?.user?.role === 'farmer' || session?.user?.role === 'admin') && (
+              <Button
+                variant={pathname === '/admin/token' ? 'default' : 'outline'}
+                size="sm"
+                asChild
+                className="hidden items-center gap-1.5 lg:flex"
+              >
+                <Link href="/admin/token">
+                  <ShieldCheck className="h-4 w-4" />
+                  <span className="text-sm font-medium">Token Admin</span>
+                </Link>
+              </Button>
+            )}
+
             {/* Profile Link */}
             <Button variant="ghost" size="icon" asChild className="hidden sm:flex">
               <Link href={isAuthenticated ? '/profile' : '/signup'}>
@@ -260,6 +274,21 @@ export function Navbar() {
                 >
                   <CowIcon className="h-4 w-4" />
                   Farmer
+                </Link>
+              )}
+              {(session?.user?.role === 'farmer' || session?.user?.role === 'admin') && (
+                <Link
+                  href="/admin/token"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className={cn(
+                    'flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-colors',
+                    pathname === '/admin/token'
+                      ? 'bg-accent text-accent-foreground'
+                      : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
+                  )}
+                >
+                  <ShieldCheck className="h-4 w-4" />
+                  Token Admin
                 </Link>
               )}
               <Link

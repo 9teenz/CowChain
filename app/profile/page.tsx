@@ -1,9 +1,10 @@
 'use client'
 
+import Link from 'next/link'
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { signOut, useSession } from 'next-auth/react'
-import { Award, Calendar, Check, Coins, Copy, PieChart, RefreshCw, Unlink, Wallet } from 'lucide-react'
+import { Award, Calendar, Check, Coins, Copy, PieChart, RefreshCw, ShieldCheck, Unlink, Wallet } from 'lucide-react'
 import { StatCard } from '@/components/stat-card'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -233,6 +234,14 @@ export default function ProfilePage() {
               <Button variant="outline" onClick={() => requireAuth(() => claimDividends(wallet.preferredDividendCurrency))}>
                 Claim Earnings
               </Button>
+              {(session?.user?.role === 'farmer' || session?.user?.role === 'admin') && (
+                <Button variant="outline" asChild>
+                  <Link href="/admin/token">
+                    <ShieldCheck className="mr-2 h-4 w-4" />
+                    Token Admin
+                  </Link>
+                </Button>
+              )}
               {wallet.connected && (
                 <Button variant="outline" onClick={handleUnlinkWallet} disabled={isUnlinking}>
                   <Unlink className="mr-2 h-4 w-4" />

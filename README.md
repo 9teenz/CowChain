@@ -43,7 +43,30 @@ npm run dev
 - `/portfolio/*`
 - `/herd/*`
 
+## SPL Token Admin
 
+Добавлена админ-панель по адресу `/admin/token` для ролей `farmer` и `admin`.
+
+### Возможности
+
+- создание полноценного SPL mint через `@solana/spl-token`
+- выпуск начального и дополнительного supply
+- заполнение полей токена (`name`, `symbol`, `uri`)
+- просмотр текущего supply, authority и баланса держателя
+- отключение `mint authority`, чтобы зафиксировать эмиссию
+
+### Что нужно настроить
+
+Перед использованием добавьте в окружение:
+
+```bash
+SOLANA_CLUSTER=devnet
+SOLANA_RPC_URL=https://api.devnet.solana.com
+# опционально: список email, которым разрешён доступ к панели
+SOLANA_ADMIN_EMAILS=admin@example.com
+```
+
+> Выпуск и управление токеном в панели `/admin/token` теперь подписываются через подключённый и привязанный к аккаунту `Phantom`-кошелёк.
 
 ## Автоматизированные тесты
 
