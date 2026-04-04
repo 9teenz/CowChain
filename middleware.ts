@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 import { getToken } from 'next-auth/jwt'
 
-const protectedPrefixes = ['/herd']
+const protectedPrefixes = ['/herd', '/portfolio']
 const authSecret = process.env.NEXTAUTH_SECRET || process.env.AUTH_SECRET
 
 export default async function middleware(request: NextRequest) {
@@ -25,5 +25,5 @@ export default async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/herd/:path*'],
+  matcher: ['/herd/:path*', '/portfolio'],
 }

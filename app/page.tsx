@@ -1,7 +1,6 @@
 'use client'
 
 import Link from 'next/link'
-import { useEffect, useState } from 'react'
 import { HerdCard } from '@/components/herd-card'
 import { StatCard } from '@/components/stat-card'
 import { Button } from '@/components/ui/button'
@@ -9,17 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { useDemoState } from '@/components/demo-state-provider'
 import { formatCurrency, formatNumber } from '@/lib/utils'
 import { shortenWallet } from '@/lib/solana-contract'
-import { Wallet, TrendingUp, Coins, Users, Sparkles, RefreshCw, ShoppingCart } from 'lucide-react'
-
-type Cluster = 'mainnet-beta' | 'devnet' | 'testnet'
-
-type PhantomRequestProvider = {
-  request: (args: { method: string; params?: unknown[] }) => Promise<unknown>
-}
-
-function isCluster(value: unknown): value is Cluster {
-  return value === 'mainnet-beta' || value === 'devnet' || value === 'testnet'
-}
+import { Wallet, TrendingUp, Coins, Users, Sparkles } from 'lucide-react'
 
 export default function DashboardPage() {
   const {
@@ -27,48 +16,6 @@ export default function DashboardPage() {
     portfolioSummary,
     claimDividends,
   } = useDemoState()
-
-  const [realSolBalance, setRealSolBalance] = useState<number | null>(null)
-  const [isSolLoading, setIsSolLoading] = useState(false)
-
-  const connectedWalletAddress = wallet.connected ? wallet.walletAddress : ''
-
-  const fetchSolBalance = async () => {
-    if (!wallet.connected || !connectedWalletAddress) {
-      setRealSolBalance(null)
-      return
-    }
-    setIsSolLoading(true)
-    try {
-      let preferredCluster: Cluster | 'auto' = 'auto'
-      try {
-        const provider = (window as Window & { solana?: PhantomRequestProvider }).solana
-        const providerCluster = await provider?.request?.({ method: 'getCluster' })
-        if (isCluster(providerCluster)) preferredCluster = providerCluster
-      } catch { /* fallback to auto */ }
-
-      const requestBalance = (cluster: Cluster | 'auto') => {
-        const params = new URLSearchParams({ address: connectedWalletAddress, cluster })
-        return fetch(`/api/wallet/balance?${params.toString()}`, { cache: 'no-store' })
-      }
-
-      let response = await requestBalance(preferredCluster)
-      let data = (await response.json()) as { ok: boolean; sol?: number }
-      if ((!response.ok || !data.ok) && preferredCluster !== 'auto') {
-        response = await requestBalance('auto')
-        data = (await response.json()) as { ok: boolean; sol?: number }
-      }
-      setRealSolBalance(data.ok && data.sol !== undefined ? data.sol : null)
-    } catch {
-      setRealSolBalance(null)
-    } finally {
-      setIsSolLoading(false)
-    }
-  }
-
-  useEffect(() => {
-    fetchSolBalance()
-  }, [wallet.connected, connectedWalletAddress])
 
   const totalHerdSize = herds.reduce((sum, herd) => sum + herd.herdSize, 0)
   const totalTokens = platform.totalSupply
@@ -95,9 +42,6 @@ export default function DashboardPage() {
               </p>
             </div>
             <div className="flex flex-wrap gap-3">
-              <Button size="lg" className="bg-white text-slate-950 hover:bg-white/90" asChild>
-                <Link href="/marketplace">Buy CowChain Token</Link>
-              </Button>
               <Button size="lg" variant="outline" className="border-white/20 bg-white/5 text-white hover:bg-white/10" asChild>
                 <Link href="/marketplace">Open Marketplace</Link>
               </Button>
@@ -121,42 +65,39 @@ export default function DashboardPage() {
               <div className="grid gap-3 sm:grid-cols-2">
                 <div className="rounded-2xl border border-white/10 bg-black/15 p-4">
                   <p className="text-xs uppercase tracking-[0.18em] text-white/55">Address</p>
-                  <p className="mt-2 font-medium text-white">{shortenWallet(wallet.walletAddress)}</p>
+                  <p className="mt-2 font-medium text-white">{wallet.connected ? shortenWallet(wallet.walletAddress) : '—'}</p>
                 </div>
                 <div className="rounded-2xl border border-white/10 bg-black/15 p-4">
                   <p className="text-xs uppercase tracking-[0.18em] text-white/55">Pending dividends</p>
-                  <p className="mt-2 font-medium text-white">{formatCurrency(portfolioSummary.pendingDividendsUsd)}</p>
+                  <p className="mt-2 font-medium text-white">{wallet.connected ? formatCurrency(portfolioSummary.pendingDividendsUsd) : '—'}</p>
                 </div>
               </div>
               <div className="rounded-2xl border border-white/10 bg-black/15 p-4">
-                <p className="text-xs uppercase tracking-[0.18em] text-white/55">SOL balance</p>
-                <p className="mt-2 text-2xl font-bold text-white">
-                  {isSolLoading ? 'Loading...' : realSolBalance !== null ? `${realSolBalance.toFixed(4)} SOL` : wallet.connected ? 'Unavailable' : '—'}
-                </p>
-                {wallet.connected && (
-                  <button
-                    onClick={fetchSolBalance}
-                    disabled={isSolLoading}
-                    className="mt-2 flex items-center gap-1 text-xs text-white/50 hover:text-white/80 disabled:cursor-not-allowed"
-                  >
-                    <RefreshCw className="h-3 w-3" />
-                    Refresh
-                  </button>
-                )}
+                <p className="text-xs uppercase tracking-[0.18em] text-white/55">Your Token Balance</p>
+                <p className="mt-2 text-2xl font-bold text-white">{wallet.connected ? formatNumber(portfolioSummary.userPlatformTokens) : '—'}</p>
+                <p className="mt-1 text-xs text-white/50">{wallet.connected ? 'CowChain tokens' : 'Connect wallet to view'}</p>
               </div>
-              <Button
-                className="w-full bg-primary text-primary-foreground"
-                onClick={() => claimDividends(wallet.preferredDividendCurrency)}
-                disabled={!wallet.connected || portfolioSummary.pendingDividendsUsd <= 0}
-              >
-                Claim Pending Dividends
-              </Button>
+              <div className="flex gap-2">
+                <Button
+                  className="flex-1 bg-white text-slate-950 hover:bg-white/90"
+                  asChild
+                >
+                  <Link href="/marketplace">Buy CowChain Token</Link>
+                </Button>
+                <Button
+                  className="flex-1 bg-primary text-primary-foreground"
+                  onClick={() => claimDividends(wallet.preferredDividendCurrency)}
+                  disabled={!wallet.connected || portfolioSummary.pendingDividendsUsd <= 0}
+                >
+                  Claim Pending Dividends
+                </Button>
+              </div>
             </CardContent>
           </Card>
         </div>
       </section>
 
-      <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <StatCard
           title="Total Herd Size"
           value={`${formatNumber(totalHerdSize)} cows`}
@@ -178,36 +119,6 @@ export default function DashboardPage() {
           changeType="positive"
           icon={TrendingUp}
         />
-        <StatCard
-          title="Your Token Balance"
-          value={formatNumber(portfolioSummary.userPlatformTokens)}
-          change={wallet.connected ? 'Tracked from connected wallet' : 'Connect wallet to trade and claim'}
-          changeType={wallet.connected ? 'positive' : 'neutral'}
-          icon={Wallet}
-        />
-      </div>
-
-      <div className="mt-8 flex flex-col items-center gap-4 rounded-3xl border border-primary/30 bg-primary/5 px-6 py-10 text-center sm:px-12">
-        <div className="flex h-14 w-14 items-center justify-center rounded-full bg-primary/15">
-          <ShoppingCart className="h-7 w-7 text-primary" />
-        </div>
-        <div>
-          <h2 className="text-2xl font-bold tracking-tight sm:text-3xl">Buy CowChain Token</h2>
-          <p className="mt-2 max-w-xl text-muted-foreground">
-            Get fractional ownership in real dairy herds. Earn dividends from cow sales, trade peer-to-peer, and track performance on-chain.
-          </p>
-        </div>
-        <div className="flex flex-wrap justify-center gap-3">
-          <Button size="lg" className="px-10 text-base" asChild>
-            <Link href="/marketplace">Buy Now</Link>
-          </Button>
-          <Button size="lg" variant="outline" className="px-8 text-base" asChild>
-            <Link href="/portfolio">My Portfolio</Link>
-          </Button>
-        </div>
-        <p className="text-sm text-muted-foreground">
-          Current price: <span className="font-semibold text-foreground">{formatCurrency(platform.navPerTokenUsd)}</span> per token
-        </p>
       </div>
 
       <div className="mt-10 grid gap-6 lg:grid-cols-[1.3fr_0.9fr]">
@@ -246,7 +157,7 @@ export default function DashboardPage() {
                       </div>
                       <div className="text-right">
                         <p className="font-semibold">{formatCurrency(listing.pricePerTokenUsd)}</p>
-                        <p className="text-xs text-muted-foreground">NAV {formatCurrency(herd?.navPerTokenUsd ?? 0)}</p>
+                        <p className="text-xs text-muted-foreground">CowChain {formatCurrency(platform.navPerTokenUsd)}</p>
                       </div>
                     </div>
                     <div className="mt-3 flex items-center justify-between text-sm text-muted-foreground">
