@@ -225,11 +225,11 @@ export function DemoStateProvider({ children }: { children: ReactNode }) {
     const totalSol = usdToSol(totalUsd)
 
     if (currency === 'USDC' && state.wallet.stablecoinBalance < totalUsd) {
-      return { ok: false, message: 'Not enough stablecoin balance for this NAV purchase.' }
+      return { ok: false, message: 'Not enough stablecoin balance for this CowChain purchase.' }
     }
 
     if (currency === 'SOL' && state.wallet.solBalance < totalSol) {
-      return { ok: false, message: 'Not enough SOL balance for this NAV purchase.' }
+      return { ok: false, message: 'Not enough SOL balance for this CowChain purchase.' }
     }
 
     const txId = generateDemoSignature()
@@ -312,7 +312,7 @@ export function DemoStateProvider({ children }: { children: ReactNode }) {
 
     return {
       ok: true,
-      message: `${tokenAmount.toLocaleString()} ${PLATFORM_TOKEN_SYMBOL} minted at NAV.`,
+        message: `${tokenAmount.toLocaleString()} ${PLATFORM_TOKEN_SYMBOL} tokens minted.`,
       txId,
     }
   }
@@ -652,7 +652,7 @@ export function DemoStateProvider({ children }: { children: ReactNode }) {
 
     return {
       ok: true,
-      message: `Cow sale registered. Dividends streamed to token holders and NAV repriced slightly.`,
+      message: `Cow sale registered. Dividends streamed to token holders and CowChain price repriced slightly.`,
       txId,
     }
   }
@@ -683,7 +683,7 @@ export function DemoStateProvider({ children }: { children: ReactNode }) {
       ),
     }))
 
-    return { ok: true, message: `${count} cow(s) added to ${herd.name}. NAV updated.` }
+    return { ok: true, message: `${count} cow(s) added to ${herd.name}. CowChain price updated.` }
   }
 
   const updateMilkRevenue = (herdId: string, newAnnualRevenueUsd: number): ActionResult => {

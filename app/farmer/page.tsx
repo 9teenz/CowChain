@@ -238,7 +238,7 @@ export default function FarmerProfilePage() {
           icon={Beef}
         />
         <StatCard
-          title="Total NAV"
+          title="Total CowChain Value"
           value={formatCurrency(totalNAV)}
           change="Value of all assets"
           changeType="positive"
@@ -284,7 +284,7 @@ export default function FarmerProfilePage() {
                       <p className="text-lg font-bold">{formatNumber(herd.herdSize)}</p>
                     </div>
                     <div className="rounded-lg bg-muted/50 p-3">
-                      <p className="text-xs text-muted-foreground">NAV</p>
+                      <p className="text-xs text-muted-foreground">CowChain</p>
                       <p className="text-lg font-bold">{formatCurrency(herd.totalValueUsd)}</p>
                     </div>
                     <div className="rounded-lg bg-muted/50 p-3">
@@ -382,7 +382,7 @@ export default function FarmerProfilePage() {
                       <tr className="border-b border-border text-left text-muted-foreground">
                         <th className="pb-3 font-medium">Farm</th>
                         <th className="pb-3 font-medium">Revenue (yr)</th>
-                        <th className="pb-3 font-medium">NAV</th>
+                        <th className="pb-3 font-medium">CowChain</th>
                         <th className="pb-3 font-medium">Revenue / mo</th>
                       </tr>
                     </thead>
@@ -518,7 +518,7 @@ export default function FarmerProfilePage() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Sell Cow</DialogTitle>
-            <DialogDescription>{herds.find((h) => h.id === modal.herdId)?.name} · NAV will be recalculated and dividends distributed to investors</DialogDescription>
+            <DialogDescription>{herds.find((h) => h.id === modal.herdId)?.name} · CowChain price will be recalculated and dividends distributed to investors</DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div className="space-y-1.5">

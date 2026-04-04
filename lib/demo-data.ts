@@ -38,6 +38,7 @@ export interface HerdPool {
   projectedYieldPct: number
   healthStatus: 'Prime' | 'Strong' | 'Watch'
   totalDividendsDistributedUsd: number
+  verified: boolean
 }
 
 export interface UserPosition {
@@ -135,6 +136,7 @@ export const initialDemoState: DemoState = {
       projectedYieldPct: 18.4,
       healthStatus: 'Prime',
       totalDividendsDistributedUsd: 4820,
+      verified: true,
     },
     {
       id: 'sunrise-valley',
@@ -151,6 +153,7 @@ export const initialDemoState: DemoState = {
       projectedYieldPct: 16.9,
       healthStatus: 'Strong',
       totalDividendsDistributedUsd: 9630,
+      verified: true,
     },
     {
       id: 'green-pastures',
@@ -167,6 +170,7 @@ export const initialDemoState: DemoState = {
       projectedYieldPct: 19.7,
       healthStatus: 'Prime',
       totalDividendsDistributedUsd: 5380,
+      verified: true,
     },
     {
       id: 'coastal-breeze',
@@ -183,6 +187,7 @@ export const initialDemoState: DemoState = {
       projectedYieldPct: 20.6,
       healthStatus: 'Watch',
       totalDividendsDistributedUsd: 2710,
+      verified: false,
     },
   ],
   positions: [

@@ -41,7 +41,7 @@ export default function AnalyticsPage() {
       <div className="mb-8">
         <h1 className="text-3xl font-bold">Platform Analytics</h1>
         <p className="mt-2 text-muted-foreground">
-          Monitor NAV spreads, dividend throughput, and the ledger mechanics backing the Solana herd token demo.
+          Monitor CowChain token price spreads, dividend throughput, and the ledger mechanics backing the Solana herd token demo.
         </p>
       </div>
 
@@ -56,7 +56,7 @@ export default function AnalyticsPage() {
         <StatCard
           title="Total Value Locked"
           value={formatCurrency(totalValueLocked)}
-          change="Asset-backed herd NAV"
+          change="Asset-backed herd value"
           changeType="positive"
           icon={DollarSign}
         />
@@ -79,7 +79,7 @@ export default function AnalyticsPage() {
       <div className="mb-8 grid gap-6 lg:grid-cols-2">
         <Card>
           <CardHeader>
-            <CardTitle>NAV vs Market Price</CardTitle>
+            <CardTitle>CowChain vs Market Price</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="h-80">
@@ -97,7 +97,7 @@ export default function AnalyticsPage() {
                     formatter={(value: number) => [formatCurrency(value), 'Price']}
                   />
                   <Legend />
-                  <Bar dataKey="nav" name="NAV" fill="var(--color-primary)" radius={[8, 8, 0, 0]} />
+                  <Bar dataKey="nav" name="CowChain" fill="var(--color-primary)" radius={[8, 8, 0, 0]} />
                   <Bar dataKey="market" name="Market" fill="var(--color-chart-2)" radius={[8, 8, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
@@ -144,7 +144,7 @@ export default function AnalyticsPage() {
                 SPL Minting
               </div>
               <p className="text-sm text-muted-foreground">
-                Direct buys mint herd tokens at NAV while reducing platform inventory. Portfolio balances update immediately for the connected wallet.
+                Direct buys mint CowChain tokens at the current price while reducing platform inventory. Portfolio balances update immediately for the connected wallet.
               </p>
             </div>
             <div className="rounded-2xl border border-border p-5">

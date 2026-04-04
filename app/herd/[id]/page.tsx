@@ -7,7 +7,7 @@ import { ArrowLeft, Droplets, MapPin, Wallet } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
-import { getAvailableTokens, useDemoState } from '@/components/demo-state-provider'
+import { useDemoState } from '@/components/demo-state-provider'
 import { useAuthGuard } from '@/hooks/use-auth-guard'
 import { listingPremiumPct, shortenWallet } from '@/lib/solana-contract'
 import { PLATFORM_TOKEN_SYMBOL } from '@/lib/demo-data'
@@ -18,14 +18,11 @@ export default function HerdDetailsPage({ params }: { params: Promise<{ id: stri
   const {
     state: { herds, positions, listings, sales, platform },
     buyAtNav,
-    listTokens,
     buyListing,
     simulateCowSale,
   } = useDemoState()
 
   const [tokenAmount, setTokenAmount] = useState('500')
-  const [listingAmount, setListingAmount] = useState('250')
-  const [listingPrice, setListingPrice] = useState('1.12')
   const [salePrice, setSalePrice] = useState('1450')
   const [purchaseCurrency, setPurchaseCurrency] = useState<'SOL' | 'USDC'>('USDC')
   const [feedback, setFeedback] = useState<string | null>(null)
@@ -63,13 +60,6 @@ export default function HerdDetailsPage({ params }: { params: Promise<{ id: stri
   const handleNavBuy = () => {
     requireAuth(() => {
       const result = buyAtNav(herd.id, Number(tokenAmount), purchaseCurrency)
-      setFeedback(result.message)
-    })
-  }
-
-  const handleList = () => {
-    requireAuth(() => {
-      const result = listTokens(herd.id, Number(listingAmount), Number(listingPrice))
       setFeedback(result.message)
     })
   }
@@ -117,7 +107,7 @@ export default function HerdDetailsPage({ params }: { params: Promise<{ id: stri
 
         <div className="grid min-w-[280px] gap-3 sm:grid-cols-2 lg:w-[360px]">
           <div className="rounded-2xl border border-primary/20 bg-primary/5 p-4">
-            <p className="text-sm text-muted-foreground">Token price (NAV)</p>
+            <p className="text-sm text-muted-foreground">CowChain token price</p>
             <p className="mt-2 text-3xl font-bold text-primary">{formatCurrency(platform.navPerTokenUsd)}</p>
           </div>
           <div className="rounded-2xl border border-border p-4">
@@ -125,7 +115,7 @@ export default function HerdDetailsPage({ params }: { params: Promise<{ id: stri
             <p className="mt-2 text-3xl font-bold">{formatCurrency(herd.marketPriceUsd)}</p>
             <p className="mt-2 text-sm text-muted-foreground">
               {listingPremiumPct(herd.marketPriceUsd, platform.navPerTokenUsd) > 0 ? '+' : ''}
-              {listingPremiumPct(herd.marketPriceUsd, platform.navPerTokenUsd)}% vs NAV
+              {listingPremiumPct(herd.marketPriceUsd, platform.navPerTokenUsd)}% vs CowChain
             </p>
           </div>
         </div>
@@ -152,7 +142,7 @@ export default function HerdDetailsPage({ params }: { params: Promise<{ id: stri
         </Card>
         <Card>
           <CardContent className="p-5">
-            <p className="text-sm text-muted-foreground">Available at NAV</p>
+            <p className="text-sm text-muted-foreground">Available at CowChain price</p>
             <p className="mt-2 text-2xl font-bold">{formatNumber(platform.availableTokens)}</p>
           </CardContent>
         </Card>
@@ -195,7 +185,7 @@ export default function HerdDetailsPage({ params }: { params: Promise<{ id: stri
           <div className="grid gap-6 xl:grid-cols-2">
             <Card>
               <CardHeader>
-                <CardTitle>NAV Trend</CardTitle>
+                <CardTitle>CowChain Price Trend</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="h-64">
@@ -218,7 +208,7 @@ export default function HerdDetailsPage({ params }: { params: Promise<{ id: stri
                       <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
                       <XAxis dataKey="period" tick={{ fill: 'var(--color-muted-foreground)' }} />
                       <YAxis tick={{ fill: 'var(--color-muted-foreground)' }} />
-                      <Tooltip formatter={(value: number) => [formatCurrency(value), 'NAV']} />
+                      <Tooltip formatter={(value: number) => [formatCurrency(value), 'CowChain']} />
                       <Area type="monotone" dataKey="nav" stroke="var(--color-primary)" fill="url(#navGradient)" strokeWidth={2} />
                     </AreaChart>
                   </ResponsiveContainer>
@@ -266,7 +256,7 @@ export default function HerdDetailsPage({ params }: { params: Promise<{ id: stri
                       <th className="pb-3 font-medium">Cow</th>
                       <th className="pb-3 font-medium">Sale price</th>
                       <th className="pb-3 font-medium">Dividend / token</th>
-                      <th className="pb-3 font-medium">NAV move</th>
+                      <th className="pb-3 font-medium">CowChain price move</th>
                       <th className="pb-3 font-medium">Settlement</th>
                     </tr>
                   </thead>
@@ -313,34 +303,10 @@ export default function HerdDetailsPage({ params }: { params: Promise<{ id: stri
               <div className="rounded-2xl border border-primary/20 bg-primary/5 p-4">
                 <p className="text-sm text-muted-foreground">Estimated annual dividend stream</p>
                 <p className="mt-2 text-3xl font-bold text-primary">{formatCurrency(estimatedEarnings)}</p>
-                <p className="mt-2 text-sm text-muted-foreground">Cost at NAV: {formatCurrency((Number(tokenAmount) || 0) * platform.navPerTokenUsd)}</p>
+                <p className="mt-2 text-sm text-muted-foreground">Cost at CowChain price: {formatCurrency((Number(tokenAmount) || 0) * platform.navPerTokenUsd)}</p>
               </div>
               <Button className="w-full" onClick={handleNavBuy}>
-                Buy PlatformToken at NAV
-              </Button>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>List Tokens on Marketplace</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div>
-                  <label className="mb-2 block text-sm font-medium">Tokens to list</label>
-                  <Input value={listingAmount} onChange={(event) => setListingAmount(event.target.value)} />
-                </div>
-                <div>
-                  <label className="mb-2 block text-sm font-medium">Price per token</label>
-                  <Input value={listingPrice} onChange={(event) => setListingPrice(event.target.value)} />
-                </div>
-              </div>
-              <div className="rounded-2xl border border-border p-4 text-sm text-muted-foreground">
-                Unlocked tokens available to list: {formatNumber(getAvailableTokens(position))}
-              </div>
-              <Button className="w-full" variant="outline" onClick={handleList}>
-                Post sell order
+                Buy CowChain Token
               </Button>
             </CardContent>
           </Card>

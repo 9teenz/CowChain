@@ -1,7 +1,7 @@
 'use client'
 
 import { useMemo, useState } from 'react'
-import { useDemoState } from '@/components/demo-state-provider'
+import { getAvailableTokens, useDemoState } from '@/components/demo-state-provider'
 import { useAuthGuard } from '@/hooks/use-auth-guard'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -9,19 +9,25 @@ import { Input } from '@/components/ui/input'
 import { StatCard } from '@/components/stat-card'
 import { formatCurrency, formatNumber } from '@/lib/utils'
 import { listingPremiumPct, shortenWallet } from '@/lib/solana-contract'
-import { Coins, ArrowUpDown, Wallet, TrendingUp } from 'lucide-react'
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Coins, ArrowUpDown, Wallet, TrendingUp, Plus } from 'lucide-react'
 
 type SortKey = 'recent' | 'price-asc' | 'price-desc' | 'return-desc'
 
 export default function MarketplacePage() {
   const {
-    state: { platform, herds, listings },
+    state: { platform, herds, listings, positions },
     buyListing,
+    listTokens,
   } = useDemoState()
   const [selectedHerd, setSelectedHerd] = useState('all')
   const [sortKey, setSortKey] = useState<SortKey>('recent')
   const [quantities, setQuantities] = useState<Record<string, string>>({})
   const [feedback, setFeedback] = useState<string | null>(null)
+  const [sellOpen, setSellOpen] = useState(false)
+  const [sellHerdId, setSellHerdId] = useState('')
+  const [listingAmount, setListingAmount] = useState('250')
+  const [listingPrice, setListingPrice] = useState('1.12')
   const { requireAuth } = useAuthGuard()
 
   const filteredListings = useMemo(() => {
@@ -67,12 +73,68 @@ export default function MarketplacePage() {
             Buyers fill existing listings in SOL while receiving herd tokens at the matched price. Sort by herd, price, or return spread against NAV.
           </p>
         </div>
+        <Button onClick={() => requireAuth(() => setSellOpen(true))} className="shrink-0">
+          <Plus className="mr-2 h-4 w-4" />
+          Sell Tokens
+        </Button>
       </div>
+
+      <Dialog open={sellOpen} onOpenChange={setSellOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Sell My Tokens</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 pt-2">
+            <div>
+              <label className="mb-2 block text-sm font-medium">Herd</label>
+              <select
+                value={sellHerdId}
+                onChange={(event) => setSellHerdId(event.target.value)}
+                className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+              >
+                <option value="">Select herd…</option>
+                {herds.map((herd) => (
+                  <option key={herd.id} value={herd.id}>{herd.name}</option>
+                ))}
+              </select>
+            </div>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div>
+                <label className="mb-2 block text-sm font-medium">Tokens to list</label>
+                <Input value={listingAmount} onChange={(event) => setListingAmount(event.target.value)} />
+              </div>
+              <div>
+                <label className="mb-2 block text-sm font-medium">Price per token</label>
+                <Input value={listingPrice} onChange={(event) => setListingPrice(event.target.value)} />
+              </div>
+            </div>
+            {sellHerdId && (() => {
+              const pos = positions.find((item) => item.herdId === sellHerdId)
+              return (
+                <div className="rounded-xl border border-border bg-muted/40 px-4 py-3 text-sm text-muted-foreground">
+                  Unlocked tokens available: {formatNumber(getAvailableTokens(pos ?? null))}
+                </div>
+              )
+            })()}
+            <Button
+              className="w-full"
+              onClick={() => {
+                if (!sellHerdId) { setFeedback('Please select a herd.'); setSellOpen(false); return }
+                const result = listTokens(sellHerdId, Number(listingAmount), Number(listingPrice))
+                setFeedback(result.message)
+                setSellOpen(false)
+              }}
+            >
+              Post sell order
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       <div className="mb-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard title="Active Listings" value={formatNumber(filteredListings.length)} icon={ArrowUpDown} />
         <StatCard title="Tokens For Sale" value={formatNumber(activeTokens)} icon={Coins} />
-        <StatCard title="Average Premium" value={`${averagePremium.toFixed(2)}%`} icon={TrendingUp} />
+        <StatCard title="Avg. vs CowChain" value={`${averagePremium.toFixed(2)}%`} icon={TrendingUp} />
         <StatCard title="Settlement Rail" value="SOL" change="Seller receives SOL on fill" changeType="neutral" icon={Wallet} />
       </div>
 
@@ -118,7 +180,7 @@ export default function MarketplacePage() {
                   <th className="pb-3 font-medium">Herd Name</th>
                   <th className="pb-3 font-medium">Tokens</th>
                   <th className="pb-3 font-medium">Price</th>
-                  <th className="pb-3 font-medium">NAV</th>
+                  <th className="pb-3 font-medium">CowChain</th>
                   <th className="pb-3 font-medium">% Return</th>
                   <th className="pb-3 font-medium">Seller</th>
                   <th className="pb-3 font-medium">Buy Amount</th>
@@ -177,6 +239,7 @@ export default function MarketplacePage() {
           </div>
         </CardContent>
       </Card>
+
     </div>
   )
 }

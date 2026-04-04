@@ -9,7 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { useDemoState } from '@/components/demo-state-provider'
 import { formatCurrency, formatNumber } from '@/lib/utils'
 import { shortenWallet } from '@/lib/solana-contract'
-import { Wallet, TrendingUp, Coins, Users, ArrowRight, Sparkles, RefreshCw } from 'lucide-react'
+import { Wallet, TrendingUp, Coins, Users, Sparkles, RefreshCw } from 'lucide-react'
 
 type Cluster = 'mainnet-beta' | 'devnet' | 'testnet'
 
@@ -91,11 +91,14 @@ export default function DashboardPage() {
                 Tokenize herd ownership, trade it peer-to-peer, and stream cow-sale dividends to wallets.
               </h1>
               <p className="max-w-2xl text-base text-white/75 sm:text-lg">
-                CowChain models a Solana herd pool where each SPL token is a fractional claim on a cow collective. Buy at NAV, fill market orders above or below NAV, and claim dividends the moment the farm exits livestock.
+                CowChain models a Solana herd pool where each SPL token is a fractional claim on a cow collective. Buy CowChain tokens, fill market orders, and claim dividends the moment the farm exits livestock.
               </p>
             </div>
             <div className="flex flex-wrap gap-3">
               <Button size="lg" className="bg-white text-slate-950 hover:bg-white/90" asChild>
+                <Link href="/marketplace">Buy CowChain Token</Link>
+              </Button>
+              <Button size="lg" variant="outline" className="border-white/20 bg-white/5 text-white hover:bg-white/10" asChild>
                 <Link href="/marketplace">Open Marketplace</Link>
               </Button>
               <Button size="lg" variant="outline" className="border-white/20 bg-white/5 text-white hover:bg-white/10" asChild>
@@ -169,9 +172,9 @@ export default function DashboardPage() {
           icon={Coins}
         />
         <StatCard
-          title="Platform NAV"
+          title="CowChain Price"
           value={formatCurrency(averageNav)}
-          change="Platform-wide entry price"
+          change="CowChain token price"
           changeType="positive"
           icon={TrendingUp}
         />
@@ -188,17 +191,11 @@ export default function DashboardPage() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between">
             <div>
-              <CardTitle>Live Herd Pools</CardTitle>
+              <CardTitle>Partners</CardTitle>
               <p className="mt-1 text-sm text-muted-foreground">
-                Buy directly at NAV or inspect order book liquidity on each pool.
+                Tokenized herd pools participating in the platform.
               </p>
             </div>
-            <Button variant="ghost" asChild>
-              <Link href="/marketplace">
-                Full order book
-                <ArrowRight className="ml-2 h-4 w-4" />
-              </Link>
-            </Button>
           </CardHeader>
           <CardContent>
             <div className="grid gap-6 md:grid-cols-2">

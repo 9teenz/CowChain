@@ -46,9 +46,9 @@ export default function PortfolioPage() {
           icon={Wallet}
         />
         <StatCard
-          title="Current NAV"
+          title="CowChain Value"
           value={formatCurrency(portfolioSummary.currentNavValueUsd)}
-          change="Blended NAV valuation"
+          change="CowChain token valuation"
           changeType="neutral"
           icon={DollarSign}
         />
