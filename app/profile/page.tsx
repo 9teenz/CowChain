@@ -10,7 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { useDemoState } from '@/components/demo-state-provider'
 import { useAuthGuard } from '@/hooks/use-auth-guard'
 import { shortenWallet } from '@/lib/solana-contract'
-import { formatCurrency, formatNumber } from '@/lib/utils'
+import { formatCurrency, formatNumber, cn } from '@/lib/utils'
 
 type Cluster = 'mainnet-beta' | 'devnet' | 'testnet'
 
@@ -190,10 +190,20 @@ export default function ProfilePage() {
                     {copied ? <Check className="h-4 w-4 text-primary" /> : <Copy className="h-4 w-4" />}
                   </button>
                 </div>
-                <div className="inline-flex items-center gap-2 rounded-full bg-primary/10 px-3 py-1 text-sm font-medium text-primary">
+                <div
+                  className={cn(
+                    'inline-flex items-center gap-2 rounded-full px-3 py-1 text-sm font-medium',
+                    wallet.connected ? 'bg-primary/10 text-primary' : 'bg-red-500/10 text-red-500'
+                  )}
+                >
                   <Award className="h-3 w-3" />
                   {wallet.connected ? `${wallet.provider} connected` : 'Disconnected'}
                 </div>
+                {session?.user?.role === 'farmer' && (
+                  <div className="inline-flex items-center gap-1.5 rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-sm font-medium text-primary">
+                    Farmer
+                  </div>
+                )}
               </div>
 
               <div className="grid gap-2 text-sm text-muted-foreground sm:grid-cols-2">

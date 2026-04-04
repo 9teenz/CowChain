@@ -24,6 +24,15 @@ export default function SignupPage() {
   const [role, setRole] = useState<'investor' | 'farmer'>('investor')
   const [message, setMessage] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [isRegistered, setIsRegistered] = useState(false)
+  const [resendCooldown, setResendCooldown] = useState(0)
+
+  useEffect(() => {
+    if (resendCooldown > 0) {
+      const timer = setTimeout(() => setResendCooldown((c) => c - 1), 1000)
+      return () => clearTimeout(timer)
+    }
+  }, [resendCooldown])
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
@@ -84,6 +93,8 @@ export default function SignupPage() {
       return
     }
 
+    setIsRegistered(true)
+    setResendCooldown(15)
     setMessage(data.message || 'Account created. Check your email for verification link.')
   }
 
@@ -115,6 +126,7 @@ export default function SignupPage() {
       return
     }
 
+    setResendCooldown(15)
     setMessage(data.message || 'Verification email sent.')
   }
 
@@ -346,9 +358,17 @@ export default function SignupPage() {
               )}
             </Button>
 
-            <Button type="button" variant="outline" className="w-full" onClick={resendVerification} disabled={isLoading}>
-              Resend verification email
-            </Button>
+            {isRegistered && (
+              <Button 
+                type="button" 
+                variant="outline" 
+                className="w-full" 
+                onClick={resendVerification} 
+                disabled={isLoading || resendCooldown > 0}
+              >
+                {resendCooldown > 0 ? `Resend available in ${resendCooldown}s` : 'Resend verification email'}
+              </Button>
+            )}
 
             {message ? <p className="text-sm text-green-600">{message}</p> : null}
             {error ? <p className="text-sm text-red-500">{error}</p> : null}
