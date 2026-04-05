@@ -11,9 +11,12 @@ import {
   Connection,
   Keypair,
   PublicKey,
+  Transaction,
   clusterApiUrl,
+  sendAndConfirmTransaction,
 } from '@solana/web3.js'
 import bs58 from 'bs58'
+import { buildUpsertTokenMetadataInstruction } from '@/lib/token-metadata'
 
 export type TokenCluster = 'devnet' | 'testnet' | 'mainnet-beta'
 
@@ -43,6 +46,14 @@ export interface InspectTokenMintInput {
 
 export interface DisableMintAuthorityInput {
   mintAddress: string
+  cluster?: TokenCluster
+}
+
+export interface UpsertTokenMetadataInput {
+  mintAddress: string
+  name: string
+  symbol: string
+  uri?: string
   cluster?: TokenCluster
 }
 
@@ -102,6 +113,30 @@ function getConnection(cluster?: TokenCluster) {
     cluster: resolvedCluster,
     rpcUrl: resolveRpcUrl(resolvedCluster),
     connection: new Connection(resolveRpcUrl(resolvedCluster), 'confirmed'),
+  }
+}
+
+async function sendMetadataTransaction(
+  connection: Connection,
+  payer: Keypair,
+  mint: PublicKey,
+  input: { name: string; symbol: string; uri?: string }
+) {
+  const { instruction, metadataAddress, metadataAction } = await buildUpsertTokenMetadataInstruction(
+    connection,
+    mint,
+    payer.publicKey,
+    input
+  )
+
+  const metadataSignature = await sendAndConfirmTransaction(connection, new Transaction().add(instruction), [payer], {
+    commitment: 'confirmed',
+  })
+
+  return {
+    metadataSignature,
+    metadataAddress: metadataAddress.toBase58(),
+    metadataStatus: metadataAction,
   }
 }
 
@@ -182,6 +217,12 @@ export async function createManagedToken(input: CreateManagedTokenInput) {
     input.decimals
   )
 
+  const metadataResult = await sendMetadataTransaction(connection, payer, mint, {
+    name: input.name,
+    symbol: input.symbol,
+    uri: input.uri,
+  })
+
   const recipient = new PublicKey(input.recipient || payer.publicKey.toBase58())
   const tokenAccount = await getOrCreateAssociatedTokenAccount(connection, payer, mint, recipient)
 
@@ -205,13 +246,40 @@ export async function createManagedToken(input: CreateManagedTokenInput) {
     decimals: mintInfo.decimals,
     supply: formatBaseUnits(mintInfo.supply, mintInfo.decimals),
     supplyBaseUnits: mintInfo.supply.toString(),
-    metadataSignature: null,
+    ...metadataResult,
     metadata: {
       name: input.name,
       symbol: input.symbol,
       uri: input.uri || null,
     },
     mintSignature,
+  }
+}
+
+export async function upsertTokenMetadata(input: UpsertTokenMetadataInput) {
+  const { connection, cluster, rpcUrl } = getConnection(input.cluster)
+  const payer = getAdminKeypair()
+  const mintPublicKey = new PublicKey(input.mintAddress)
+
+  await getMint(connection, mintPublicKey)
+
+  const metadataResult = await sendMetadataTransaction(connection, payer, mintPublicKey, {
+    name: input.name,
+    symbol: input.symbol,
+    uri: input.uri,
+  })
+
+  return {
+    cluster,
+    rpcUrl,
+    mintAddress: mintPublicKey.toBase58(),
+    adminPublicKey: payer.publicKey.toBase58(),
+    ...metadataResult,
+    metadata: {
+      name: input.name,
+      symbol: input.symbol,
+      uri: input.uri || null,
+    },
   }
 }
 

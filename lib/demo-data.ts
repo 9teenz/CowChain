@@ -1,6 +1,7 @@
 import type { SettlementCurrency } from '@/lib/solana-contract'
 
-export const PLATFORM_TOKEN_MINT = 'PtFmCoWcHaiN111111111111111111111111111'   
+export const PLATFORM_TOKEN_MINT =
+  process.env.NEXT_PUBLIC_COWCHAIN_TOKEN_MINT?.trim() || '64TieBxPwSi37Eem9GAGaab1T59nvyiPHEABrbEsH3Tp'
 export const PLATFORM_TOKEN_SYMBOL = 'CowChain'
 
 export interface PlatformToken {
@@ -20,6 +21,7 @@ export interface DemoWallet {
   walletAddress: string
   solBalance: number
   stablecoinBalance: number
+  platformTokenBalance: number | null
   preferredDividendCurrency: SettlementCurrency
 }
 
@@ -110,6 +112,7 @@ export const initialDemoState: DemoState = {
     walletAddress: '7GhK9m2x4nLp3qRt5vWy8zAb1cDe6fHj92kL',
     solBalance: 82.46,
     stablecoinBalance: 18640,
+    platformTokenBalance: null,
     preferredDividendCurrency: 'USDC',
   },
   platform: {

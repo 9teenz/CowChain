@@ -23,6 +23,7 @@ import {
   createTokenWithPhantom,
   disableMintAuthorityWithPhantom,
   mintTokenWithPhantom,
+  upsertTokenMetadataWithPhantom,
 } from '@/lib/phantom-spl-token'
 import { shortenWallet } from '@/lib/solana-contract'
 
@@ -43,10 +44,22 @@ function explorerUrl(kind: 'address' | 'tx', value: string, cluster: Cluster) {
   return `https://explorer.solana.com/${kind}/${value}${suffix}`
 }
 
+function buildGeneratedMetadataUrl(name: string, symbol: string) {
+  if (typeof window === 'undefined') {
+    return ''
+  }
+
+  const url = new URL('/api/token-metadata', window.location.origin)
+  url.searchParams.set('name', name.trim() || 'MilkChain Token')
+  url.searchParams.set('symbol', symbol.trim().toUpperCase() || 'MILK')
+  return url.toString()
+}
+
 export default function TokenAdminPage() {
   const { data: session, status } = useSession()
   const {
     state: { wallet },
+    setPlatformMint,
   } = useDemoState()
   const [cluster, setCluster] = useState<Cluster>('devnet')
   const [statusData, setStatusData] = useState<AdminStatus | null>(null)
@@ -61,7 +74,14 @@ export default function TokenAdminPage() {
     decimals: '6',
     initialSupply: '1000000',
     recipient: '',
-    uri: 'https://example.com/milkchain-token.json',
+    uri: '',
+  })
+
+  const [metadataForm, setMetadataForm] = useState({
+    mintAddress: '',
+    name: 'MilkChain Token',
+    symbol: 'MILK',
+    uri: '',
   })
 
   const [mintForm, setMintForm] = useState({
@@ -82,6 +102,14 @@ export default function TokenAdminPage() {
 
   const linkedWalletAddress = session?.user?.walletAddress || null
   const isLinkedWalletConnected = !!linkedWalletAddress && wallet.connected && wallet.walletAddress === linkedWalletAddress
+  const generatedCreateMetadataUrl = useMemo(
+    () => buildGeneratedMetadataUrl(createForm.name, createForm.symbol),
+    [createForm.name, createForm.symbol]
+  )
+  const generatedFixMetadataUrl = useMemo(
+    () => buildGeneratedMetadataUrl(metadataForm.name, metadataForm.symbol),
+    [metadataForm.name, metadataForm.symbol]
+  )
 
   const loadStatus = async (targetCluster: Cluster) => {
     const response = await fetch(`/api/admin/spl-token?cluster=${targetCluster}`, { cache: 'no-store' })
@@ -117,8 +145,20 @@ export default function TokenAdminPage() {
       setFeedback(successMessage)
 
       if (typeof data.mintAddress === 'string') {
+        setPlatformMint(data.mintAddress as string)
         setMintForm((current) => ({ ...current, mintAddress: data.mintAddress as string }))
         setInspectForm((current) => ({ ...current, mintAddress: data.mintAddress as string }))
+        setMetadataForm((current) => ({ ...current, mintAddress: data.mintAddress as string }))
+      }
+
+      if (data.metadata && typeof data.metadata === 'object') {
+        const metadata = data.metadata as Record<string, unknown>
+        setMetadataForm((current) => ({
+          ...current,
+          name: typeof metadata.name === 'string' ? metadata.name : current.name,
+          symbol: typeof metadata.symbol === 'string' ? metadata.symbol : current.symbol,
+          uri: typeof metadata.uri === 'string' ? metadata.uri : current.uri,
+        }))
       }
 
       await loadStatus(cluster)
@@ -220,7 +260,7 @@ export default function TokenAdminPage() {
           </div>
           <h1 className="text-3xl font-bold tracking-tight">SPL Token Issuer Console</h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            Use the Phantom wallet linked to your account to create a real SPL mint, issue supply, and lock minting.
+            Use the Phantom wallet linked to your account to create a real SPL mint, write Phantom metadata, issue supply, and lock minting.
           </p>
         </div>
 
@@ -254,9 +294,9 @@ export default function TokenAdminPage() {
             <p>
               {linkedWalletAddress
                 ? isLinkedWalletConnected
-                  ? `Phantom connected: ${shortenWallet(linkedWalletAddress)}`
-                  : 'Phantom wallet is linked to your account. Reconnect it in the browser before minting.'
-                : 'Open Connect Wallet and link your Phantom wallet to this account.'}
+                  ? `Phantom connected via profile: ${shortenWallet(linkedWalletAddress)}`
+                  : `Phantom wallet is linked in your profile: ${shortenWallet(linkedWalletAddress)}`
+                : 'Open Profile or Connect Wallet and link your Phantom wallet to this account.'}
             </p>
           </CardContent>
         </Card>
@@ -277,6 +317,7 @@ export default function TokenAdminPage() {
           </CardHeader>
           <CardContent className="space-y-1 text-sm text-muted-foreground">
             <p>• Create SPL mint + supply</p>
+            <p>• Fix Phantom name + avatar</p>
             <p>• Mint extra supply</p>
             <p>• Inspect holders and supply</p>
             <p>• Revoke mint authority</p>
@@ -284,31 +325,19 @@ export default function TokenAdminPage() {
         </Card>
       </div>
 
-      {!linkedWalletAddress ? (
-        <Card className="border-amber-500/30 bg-amber-500/5">
-          <CardContent className="flex flex-col gap-3 p-4 text-sm text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <p className="font-medium text-foreground">Phantom wallet not linked</p>
-              <p>Before minting, link the same Phantom wallet to your account.</p>
-            </div>
-            <Button asChild>
-              <Link href="/connect-wallet">Connect Wallet</Link>
-            </Button>
-          </CardContent>
-        </Card>
-      ) : null}
-
       {feedback ? <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-700 dark:text-emerald-300">{feedback}</div> : null}
       {error ? <div className="rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-700 dark:text-red-300">{error}</div> : null}
 
-      <div className="grid gap-6 xl:grid-cols-2">
+      <div className="grid gap-6 xl:grid-cols-3">
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Sparkles className="h-4 w-4 text-primary" />
               Create new SPL token
             </CardTitle>
-            <CardDescription>Creates the mint and optionally issues the first supply to a wallet.</CardDescription>
+            <CardDescription>
+              Creates the mint, writes Metaplex metadata for Phantom, and optionally issues the first supply.
+            </CardDescription>
           </CardHeader>
           <CardContent className="grid gap-4">
             <div className="grid gap-2 sm:grid-cols-2">
@@ -339,8 +368,16 @@ export default function TokenAdminPage() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="token-uri">Metadata / project URI</Label>
-              <Input id="token-uri" value={createForm.uri} onChange={(event) => setCreateForm((current) => ({ ...current, uri: event.target.value }))} />
+              <Label htmlFor="token-uri">Metadata JSON URL (optional)</Label>
+              <Input
+                id="token-uri"
+                placeholder="Leave empty to auto-generate from Name and Symbol"
+                value={createForm.uri}
+                onChange={(event) => setCreateForm((current) => ({ ...current, uri: event.target.value }))}
+              />
+              <p className="text-xs text-muted-foreground">
+                If left empty, MilkChain will generate it automatically: {generatedCreateMetadataUrl || '—'}
+              </p>
             </div>
 
             <Button
@@ -355,7 +392,7 @@ export default function TokenAdminPage() {
                     decimals: Number(createForm.decimals),
                     initialSupply: createForm.initialSupply,
                     recipient: createForm.recipient || undefined,
-                    uri: createForm.uri || undefined,
+                    uri: createForm.uri.trim() || generatedCreateMetadataUrl || undefined,
                     enableFreezeAuthority: true,
                   }),
                 'SPL token mint created successfully.'
@@ -430,6 +467,80 @@ export default function TokenAdminPage() {
                 {busyAction === 'disableMintAuthority' ? 'Locking…' : 'Revoke mint authority'}
               </Button>
             </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Sparkles className="h-4 w-4 text-primary" />
+              Fix Phantom metadata
+            </CardTitle>
+            <CardDescription>
+              Creates or updates the Metaplex metadata so Phantom can show the token name and avatar.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="grid gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="metadata-mint-address">Mint address</Label>
+              <Input
+                id="metadata-mint-address"
+                value={metadataForm.mintAddress}
+                onChange={(event) => setMetadataForm((current) => ({ ...current, mintAddress: event.target.value }))}
+              />
+            </div>
+
+            <div className="grid gap-2 sm:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="metadata-name">Name</Label>
+                <Input
+                  id="metadata-name"
+                  value={metadataForm.name}
+                  onChange={(event) => setMetadataForm((current) => ({ ...current, name: event.target.value }))}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="metadata-symbol">Symbol</Label>
+                <Input
+                  id="metadata-symbol"
+                  value={metadataForm.symbol}
+                  onChange={(event) => setMetadataForm((current) => ({ ...current, symbol: event.target.value.toUpperCase() }))}
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="metadata-uri">Metadata JSON URL (optional)</Label>
+              <Input
+                id="metadata-uri"
+                placeholder="Leave empty to auto-generate from Name and Symbol"
+                value={metadataForm.uri}
+                onChange={(event) => setMetadataForm((current) => ({ ...current, uri: event.target.value }))}
+              />
+              <p className="text-xs text-muted-foreground">
+                If left empty, MilkChain will use: {generatedFixMetadataUrl || '—'}
+              </p>
+            </div>
+
+            <Button
+              onClick={() => runAction(
+                'upsertMetadata',
+                async () =>
+                  upsertTokenMetadataWithPhantom({
+                    cluster,
+                    expectedWalletAddress: linkedWalletAddress,
+                    mintAddress: metadataForm.mintAddress,
+                    name: metadataForm.name,
+                    symbol: metadataForm.symbol,
+                    uri: metadataForm.uri.trim() || generatedFixMetadataUrl || undefined,
+                  }),
+                'Token metadata updated. Phantom may need a refresh to show the new avatar.'
+              )}
+              disabled={busyAction !== null || !linkedWalletAddress || !metadataForm.mintAddress.trim()}
+            >
+              <Sparkles className="mr-2 h-4 w-4" />
+              {busyAction === 'upsertMetadata' ? 'Updating…' : 'Apply metadata'}
+            </Button>
           </CardContent>
         </Card>
       </div>

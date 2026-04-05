@@ -1,5 +1,6 @@
 'use client'
 
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { HerdCard } from '@/components/herd-card'
 import { StatCard } from '@/components/stat-card'
@@ -10,15 +11,73 @@ import { formatCurrency, formatNumber } from '@/lib/utils'
 import { shortenWallet } from '@/lib/solana-contract'
 import { Wallet, TrendingUp, Coins, Users, Sparkles } from 'lucide-react'
 
+type TokenSupplyResponse = {
+  ok?: boolean
+  amount?: number
+  cluster?: string
+  error?: string
+}
+
 export default function DashboardPage() {
   const {
     state: { herds, listings, sales, wallet, platform },
     portfolioSummary,
     claimDividends,
   } = useDemoState()
+  const [liveTotalTokens, setLiveTotalTokens] = useState(platform.totalSupply)
+  const [tokenSupplyLabel, setTokenSupplyLabel] = useState('Loading live CowChain supply...')
+
+  useEffect(() => {
+    let isMounted = true
+
+    const fetchTokenSupply = async () => {
+      setTokenSupplyLabel('Loading live CowChain supply...')
+
+      try {
+        const params = new URLSearchParams()
+
+        if (platform.mint) {
+          params.set('mint', platform.mint)
+        }
+
+        if (platform.symbol) {
+          params.set('symbol', platform.symbol)
+        }
+
+        const response = await fetch(`/api/token-supply?${params.toString()}`, { cache: 'no-store' })
+        const data = (await response.json()) as TokenSupplyResponse
+
+        if (!isMounted) {
+          return
+        }
+
+        if (!response.ok || !data.ok || typeof data.amount !== 'number') {
+          setLiveTotalTokens(platform.totalSupply)
+          setTokenSupplyLabel(data.error || 'Using cached CowChain supply')
+          return
+        }
+
+        setLiveTotalTokens(data.amount)
+        setTokenSupplyLabel(`Live on-chain supply · ${data.cluster || 'RPC'}`)
+      } catch {
+        if (!isMounted) {
+          return
+        }
+
+        setLiveTotalTokens(platform.totalSupply)
+        setTokenSupplyLabel('Using cached CowChain supply')
+      }
+    }
+
+    void fetchTokenSupply()
+
+    return () => {
+      isMounted = false
+    }
+  }, [platform.mint, platform.symbol, platform.totalSupply])
 
   const totalHerdSize = herds.reduce((sum, herd) => sum + herd.herdSize, 0)
-  const totalTokens = platform.totalSupply
+  const totalTokens = liveTotalTokens
   const averageNav = platform.navPerTokenUsd
   const topListings = [...listings].sort((left, right) => left.pricePerTokenUsd - right.pricePerTokenUsd).slice(0, 3)
   const latestSales = sales.slice(0, 3)
@@ -108,7 +167,7 @@ export default function DashboardPage() {
         <StatCard
           title="Platform Token Supply"
           value={formatNumber(totalTokens)}
-          change="PlatformToken (MCHAIN) supply"
+          change={tokenSupplyLabel}
           changeType="neutral"
           icon={Coins}
         />

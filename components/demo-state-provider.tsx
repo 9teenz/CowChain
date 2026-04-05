@@ -2,6 +2,7 @@
 
 import { createContext, useContext, useEffect, useMemo, useState } from 'react'
 import type { ReactNode } from 'react'
+import { useSession } from 'next-auth/react'
 import {
   buildActionLabel,
   calculateNavAfterSale,
@@ -21,9 +22,10 @@ import type {
   UserPosition,
   WalletProviderName,
 } from '@/lib/demo-data'
-import { initialDemoState, PLATFORM_TOKEN_SYMBOL } from '@/lib/demo-data'
+import { initialDemoState, PLATFORM_TOKEN_MINT, PLATFORM_TOKEN_SYMBOL } from '@/lib/demo-data'
 
 const STORAGE_KEY = 'cowchain-demo-state'
+const LEGACY_DEMO_PLATFORM_MINT = 'PtFmCoWcHaiN111111111111111111111111111'
 
 type ActionResult = {
   ok: boolean
@@ -38,6 +40,8 @@ interface DemoStateContextValue {
   state: DemoState
   connectWallet: (provider: WalletProviderName, walletAddress?: string) => ActionResult
   disconnectWallet: () => void
+  setPlatformMint: (mint: string) => void
+  setPlatformTokenBalance: (balance: number | null) => void
   setPreferredDividendCurrency: (currency: BuyCurrency) => void
   buyAtNav: (herdId: string, tokenAmount: number, currency: BuyCurrency) => ActionResult
   listTokens: (herdId: string, tokenAmount: number, pricePerTokenUsd: number) => ActionResult
@@ -62,6 +66,16 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
 }
 
+export function normalizePlatformMint(value: unknown) {
+  const mint = typeof value === 'string' ? value.trim() : ''
+
+  if (!mint || mint === LEGACY_DEMO_PLATFORM_MINT) {
+    return PLATFORM_TOKEN_MINT
+  }
+
+  return mint
+}
+
 function normalizePersistedDemoState(value: unknown): DemoState {
   if (!isRecord(value)) {
     return initialDemoState
@@ -72,7 +86,11 @@ function normalizePersistedDemoState(value: unknown): DemoState {
     : initialDemoState.wallet
 
   const platform = isRecord(value.platform)
-    ? { ...initialDemoState.platform, ...(value.platform as Partial<PlatformToken>) }
+    ? {
+        ...initialDemoState.platform,
+        ...(value.platform as Partial<PlatformToken>),
+        mint: normalizePlatformMint((value.platform as Partial<PlatformToken>).mint),
+      }
     : initialDemoState.platform
 
   const herds = Array.isArray(value.herds) ? (value.herds as HerdPool[]) : initialDemoState.herds
@@ -140,6 +158,7 @@ function updateDividendSeries(series: DemoState['dividendSeries'], delta: number
 }
 
 export function DemoStateProvider({ children }: { children: ReactNode }) {
+  const { data: session, status: sessionStatus } = useSession()
   const [state, setState] = useState<DemoState>(initialDemoState)
   const [isHydrated, setIsHydrated] = useState(false)
 
@@ -163,6 +182,65 @@ export function DemoStateProvider({ children }: { children: ReactNode }) {
 
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(state))
   }, [isHydrated, state])
+
+  useEffect(() => {
+    if (!isHydrated) {
+      return
+    }
+
+    const normalizedMint = normalizePlatformMint(state.platform.mint)
+    if (state.platform.mint === normalizedMint) {
+      return
+    }
+
+    setState((current) => ({
+      ...current,
+      platform: {
+        ...current.platform,
+        mint: normalizedMint,
+      },
+    }))
+  }, [isHydrated, state.platform.mint])
+
+  useEffect(() => {
+    if (!isHydrated || sessionStatus === 'loading') {
+      return
+    }
+
+    const linkedWalletAddress = session?.user?.walletAddress?.trim() || ''
+
+    setState((current) => {
+      if (linkedWalletAddress) {
+        if (current.wallet.connected && current.wallet.walletAddress === linkedWalletAddress) {
+          return current
+        }
+
+        return {
+          ...current,
+          wallet: {
+            ...current.wallet,
+            connected: true,
+            provider: current.wallet.provider || 'Phantom',
+            walletAddress: linkedWalletAddress,
+          },
+        }
+      }
+
+      if (!current.wallet.connected && !current.wallet.walletAddress) {
+        return current
+      }
+
+      return {
+        ...current,
+        wallet: {
+          ...current.wallet,
+          connected: false,
+          provider: null,
+          walletAddress: '',
+        },
+      }
+    })
+  }, [isHydrated, session?.user?.walletAddress, sessionStatus])
 
   const connectWallet = (provider: WalletProviderName, walletAddress?: string): ActionResult => {
     setState((current) => ({
@@ -189,8 +267,47 @@ export function DemoStateProvider({ children }: { children: ReactNode }) {
         connected: false,
         provider: null,
         walletAddress: '',
+        platformTokenBalance: null,
       },
     }))
+  }
+
+  const setPlatformMint = (mint: string) => {
+    const normalizedMint = normalizePlatformMint(mint)
+
+    if (!normalizedMint) {
+      return
+    }
+
+    setState((current) => {
+      if (current.platform.mint === normalizedMint) {
+        return current
+      }
+
+      return {
+        ...current,
+        platform: {
+          ...current.platform,
+          mint: normalizedMint,
+        },
+      }
+    })
+  }
+
+  const setPlatformTokenBalance = (balance: number | null) => {
+    setState((current) => {
+      if (current.wallet.platformTokenBalance === balance) {
+        return current
+      }
+
+      return {
+        ...current,
+        wallet: {
+          ...current.wallet,
+          platformTokenBalance: balance,
+        },
+      }
+    })
   }
 
   const setPreferredDividendCurrency = (currency: BuyCurrency) => {
@@ -708,12 +825,70 @@ export function DemoStateProvider({ children }: { children: ReactNode }) {
     return { ok: true, message: `Milk revenue updated for ${herd.name}.` }
   }
 
+  useEffect(() => {
+    if (!isHydrated) {
+      return
+    }
+
+    const walletAddress = state.wallet.walletAddress?.trim()
+    const mintAddress = state.platform.mint?.trim()
+
+    if (!state.wallet.connected || !walletAddress || !mintAddress) {
+      setPlatformTokenBalance(null)
+      return
+    }
+
+    let isCancelled = false
+
+    const syncPlatformTokenBalance = async () => {
+      try {
+        const params = new URLSearchParams({
+          address: walletAddress,
+          mint: mintAddress,
+          cluster: 'auto',
+          symbol: state.platform.symbol,
+        })
+
+        const response = await fetch(`/api/wallet/token-balance?${params.toString()}`, { cache: 'no-store' })
+        const data = (await response.json()) as { ok?: boolean; amount?: number }
+
+        if (isCancelled) {
+          return
+        }
+
+        if (!response.ok || !data.ok || typeof data.amount !== 'number') {
+          setPlatformTokenBalance(null)
+          return
+        }
+
+        setPlatformTokenBalance(data.amount)
+      } catch {
+        if (!isCancelled) {
+          setPlatformTokenBalance(null)
+        }
+      }
+    }
+
+    void syncPlatformTokenBalance()
+
+    return () => {
+      isCancelled = true
+    }
+  }, [
+    isHydrated,
+    state.platform.mint,
+    state.platform.symbol,
+    state.wallet.connected,
+    state.wallet.walletAddress,
+  ])
+
   const portfolioSummary = useMemo(() => {
     const positions = state.positions ?? initialDemoState.positions
     const herds = state.herds ?? initialDemoState.herds
     const platformTokenSupply = (state.platform ?? initialDemoState.platform).totalSupply
 
-    const userPlatformTokens = positions.reduce((sum, position) => sum + position.tokensOwned, 0)
+    const userPlatformTokens =
+      state.wallet.platformTokenBalance ?? positions.reduce((sum, position) => sum + position.tokensOwned, 0)
 
     const totalHerdShares = positions.reduce((sum, position) => {
       const herd = herds.find((item) => item.id === position.herdId)
@@ -757,6 +932,8 @@ export function DemoStateProvider({ children }: { children: ReactNode }) {
       state,
       connectWallet,
       disconnectWallet,
+      setPlatformMint,
+      setPlatformTokenBalance,
       setPreferredDividendCurrency,
       buyAtNav,
       listTokens,

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { getAvailableTokens, useListingPremium } from '@/components/demo-state-provider'
+import { getAvailableTokens, normalizePlatformMint, useListingPremium } from '@/components/demo-state-provider'
+import { PLATFORM_TOKEN_MINT } from '@/lib/demo-data'
 
 describe('demo-state-provider helpers', () => {
   it('returns available token amount from position', () => {
@@ -18,6 +19,10 @@ describe('demo-state-provider helpers', () => {
 
   it('returns zero available tokens without position', () => {
     expect(getAvailableTokens(undefined)).toBe(0)
+  })
+
+  it('replaces the legacy placeholder mint with the real CowChain mint', () => {
+    expect(normalizePlatformMint('PtFmCoWcHaiN111111111111111111111111111')).toBe(PLATFORM_TOKEN_MINT)
   })
 
   it('calculates listing premium relative to nav', () => {

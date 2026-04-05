@@ -7,6 +7,7 @@ const {
   getTokenAdminSummaryMock,
   inspectTokenMintMock,
   mintExistingTokenMock,
+  upsertTokenMetadataMock,
 } = vi.hoisted(() => ({
   getServerSessionMock: vi.fn(),
   getTokenAdminSummaryMock: vi.fn(),
@@ -14,6 +15,7 @@ const {
   mintExistingTokenMock: vi.fn(),
   inspectTokenMintMock: vi.fn(),
   disableMintAuthorityMock: vi.fn(),
+  upsertTokenMetadataMock: vi.fn(),
 }))
 
 vi.mock('next-auth', () => ({
@@ -30,6 +32,7 @@ vi.mock('@/lib/spl-token-admin', () => ({
   mintExistingToken: mintExistingTokenMock,
   inspectTokenMint: inspectTokenMintMock,
   disableMintAuthority: disableMintAuthorityMock,
+  upsertTokenMetadata: upsertTokenMetadataMock,
 }))
 
 import { GET, POST } from '@/app/api/admin/spl-token/route'
@@ -106,6 +109,41 @@ describe('admin spl-token route', () => {
         name: 'MilkChain',
         symbol: 'MILK',
         decimals: 6,
+      })
+    )
+  })
+
+  it('updates token metadata when payload is valid', async () => {
+    getServerSessionMock.mockResolvedValue({ user: { id: 'user-1', role: 'admin', email: 'admin@example.com' } })
+    upsertTokenMetadataMock.mockResolvedValue({
+      mintAddress: 'Mint111111111111111111111111111111111111',
+      metadataStatus: 'updated',
+    })
+
+    const request = new Request('http://localhost/api/admin/spl-token', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        action: 'upsertMetadata',
+        mintAddress: 'Mint111111111111111111111111111111111111',
+        name: 'MilkChain',
+        symbol: 'MILK',
+        uri: 'https://example.com/token.json',
+        cluster: 'devnet',
+      }),
+    })
+
+    const response = await POST(request)
+    const body = await response.json()
+
+    expect(response.status).toBe(200)
+    expect(body.ok).toBe(true)
+    expect(upsertTokenMetadataMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        action: 'upsertMetadata',
+        mintAddress: 'Mint111111111111111111111111111111111111',
+        name: 'MilkChain',
+        symbol: 'MILK',
       })
     )
   })

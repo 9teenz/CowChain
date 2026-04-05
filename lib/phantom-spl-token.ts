@@ -20,6 +20,7 @@ import {
   Transaction,
   clusterApiUrl,
 } from '@solana/web3.js'
+import { buildUpsertTokenMetadataInstruction } from '@/lib/token-metadata'
 
 export type TokenCluster = 'devnet' | 'testnet' | 'mainnet-beta'
 
@@ -47,6 +48,15 @@ export interface PhantomDisableMintAuthorityInput {
   cluster: TokenCluster
   expectedWalletAddress?: string | null
   mintAddress: string
+}
+
+export interface PhantomUpsertTokenMetadataInput {
+  cluster: TokenCluster
+  expectedWalletAddress?: string | null
+  mintAddress: string
+  name: string
+  symbol: string
+  uri?: string
 }
 
 type PhantomProvider = {
@@ -206,6 +216,19 @@ export async function createTokenWithPhantom(input: PhantomCreateTokenInput) {
     )
   )
 
+  const { instruction: metadataInstruction, metadataAddress, metadataAction } = await buildUpsertTokenMetadataInstruction(
+    connection,
+    mintKeypair.publicKey,
+    payer,
+    {
+      name: input.name,
+      symbol: input.symbol,
+      uri: input.uri,
+    }
+  )
+
+  transaction.add(metadataInstruction)
+
   const recipientTokenAccount = await ensureAssociatedTokenAccount(
     connection,
     transaction,
@@ -229,13 +252,54 @@ export async function createTokenWithPhantom(input: PhantomCreateTokenInput) {
     cluster: input.cluster,
     rpcUrl: resolveRpcUrl(input.cluster),
     signature,
+    metadataSignature: signature,
     mintAddress: mintKeypair.publicKey.toBase58(),
+    metadataAddress: metadataAddress.toBase58(),
+    metadataStatus: metadataAction,
     recipient: recipient.toBase58(),
     recipientTokenAccount: recipientTokenAccount.toBase58(),
     adminPublicKey: walletAddress,
     decimals: mintInfo.decimals,
     supply: formatBaseUnits(mintInfo.supply, mintInfo.decimals),
     supplyBaseUnits: mintInfo.supply.toString(),
+    metadata: {
+      name: input.name,
+      symbol: input.symbol,
+      uri: input.uri || null,
+    },
+  }
+}
+
+export async function upsertTokenMetadataWithPhantom(input: PhantomUpsertTokenMetadataInput) {
+  const { provider, publicKey: payer } = await ensureIssuerWallet(input.expectedWalletAddress)
+  const connection = new Connection(resolveRpcUrl(input.cluster), 'confirmed')
+  const mintPublicKey = new PublicKey(input.mintAddress)
+
+  await getMint(connection, mintPublicKey)
+
+  const { instruction, metadataAddress, metadataAction } = await buildUpsertTokenMetadataInstruction(
+    connection,
+    mintPublicKey,
+    payer,
+    {
+      name: input.name,
+      symbol: input.symbol,
+      uri: input.uri,
+    }
+  )
+
+  const transaction = new Transaction().add(instruction)
+  const signature = await sendTransaction(connection, provider, payer, transaction)
+
+  return {
+    action: 'upsertMetadata',
+    cluster: input.cluster,
+    rpcUrl: resolveRpcUrl(input.cluster),
+    signature,
+    metadataSignature: signature,
+    mintAddress: mintPublicKey.toBase58(),
+    metadataAddress: metadataAddress.toBase58(),
+    metadataStatus: metadataAction,
     metadata: {
       name: input.name,
       symbol: input.symbol,

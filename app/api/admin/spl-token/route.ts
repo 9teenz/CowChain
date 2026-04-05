@@ -8,6 +8,7 @@ import {
   getTokenAdminSummary,
   inspectTokenMint,
   mintExistingToken,
+  upsertTokenMetadata,
 } from '@/lib/spl-token-admin'
 
 const clusterSchema = z.enum(['devnet', 'testnet', 'mainnet-beta']).optional()
@@ -38,7 +39,21 @@ const disableMintAuthoritySchema = z.object({
   cluster: clusterSchema,
 })
 
-const actionSchema = z.discriminatedUnion('action', [createSchema, mintSchema, disableMintAuthoritySchema])
+const upsertMetadataSchema = z.object({
+  action: z.literal('upsertMetadata'),
+  mintAddress: z.string().trim().min(32),
+  name: z.string().trim().min(2).max(32),
+  symbol: z.string().trim().min(2).max(10),
+  uri: z.string().trim().optional(),
+  cluster: clusterSchema,
+})
+
+const actionSchema = z.discriminatedUnion('action', [
+  createSchema,
+  mintSchema,
+  disableMintAuthoritySchema,
+  upsertMetadataSchema,
+])
 
 type TokenAdminSession = {
   user?: {
@@ -154,6 +169,11 @@ export async function POST(request: Request) {
     if (parsed.data.action === 'mint') {
       const result = await mintExistingToken(parsed.data)
       return NextResponse.json({ ok: true, action: 'mint', ...result })
+    }
+
+    if (parsed.data.action === 'upsertMetadata') {
+      const result = await upsertTokenMetadata(parsed.data)
+      return NextResponse.json({ ok: true, action: 'upsertMetadata', ...result })
     }
 
     const result = await disableMintAuthority(parsed.data)
