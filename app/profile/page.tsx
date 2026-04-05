@@ -304,10 +304,6 @@ export default function ProfilePage() {
                   {t('profile.registered')} {createdAt ? new Date(createdAt).toLocaleDateString() : t('profile.recently')}
                 </span>
                 <span className="flex items-center gap-1">
-                  <PieChart className="h-4 w-4" />
-                  {positions.length} {t('profile.herdsInvested')}
-                </span>
-                <span className="flex items-center gap-1">
                   <Coins className="h-4 w-4" />
                   {formatNumber(portfolioSummary.userPlatformTokens)} {platform.symbol} {t('profile.tokensOwned')}
                 </span>

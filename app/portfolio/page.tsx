@@ -80,7 +80,7 @@ export default function PortfolioPage() {
                   </defs>
                   <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
                   <XAxis dataKey="period" tick={{ fill: 'var(--color-muted-foreground)' }} />
-                  <YAxis tick={{ fill: 'var(--color-muted-foreground)' }} />
+                  <YAxis tick={{ fill: 'var(--color-muted-foreground)' }} width={80} />
                   <Tooltip formatter={(value: number) => [formatCurrency(value), t('portfolio.portfolioTooltip')]} />
                   <Area type="monotone" dataKey="value" stroke="var(--color-primary)" fill="url(#portfolioArea)" strokeWidth={2} />
                 </AreaChart>
@@ -99,7 +99,7 @@ export default function PortfolioPage() {
                 <BarChart data={dividendSeries}>
                   <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
                   <XAxis dataKey="period" tick={{ fill: 'var(--color-muted-foreground)' }} />
-                  <YAxis tick={{ fill: 'var(--color-muted-foreground)' }} />
+                  <YAxis tick={{ fill: 'var(--color-muted-foreground)' }} width={50} />
                   <Tooltip formatter={(value: number) => [formatCurrency(value), t('portfolio.dividendsTooltip')]} />
                   <Bar dataKey="value" fill="var(--color-chart-2)" radius={[10, 10, 0, 0]} />
                 </BarChart>
@@ -109,22 +109,22 @@ export default function PortfolioPage() {
         </Card>
       </div>
 
-      <div className="mb-8 grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
-        <Card>
+      <div className="grid gap-6 lg:grid-cols-[1.15fr_0.85fr]">
+        <Card className="col-span-1 overflow-hidden">
           <CardHeader>
             <CardTitle>{t("portfolio.yourHoldings")}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="overflow-x-auto">
-              <table className="w-full min-w-[1000px] text-sm">
+              <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-border text-left text-muted-foreground whitespace-nowrap">
-                    <th className="pb-3 pr-6 font-medium">{t("portfolio.thHerd")}</th>
-                    <th className="pb-3 pr-6 font-medium">{t("portfolio.thTokens")}</th>
-                    <th className="pb-3 pr-6 font-medium">{t("portfolio.thListed")}</th>
-                    <th className="pb-3 pr-6 font-medium">{t("portfolio.thShare")}</th>
-                    <th className="pb-3 pr-6 font-medium">{t("portfolio.thPendingDivs")}</th>
-                    <th className="pb-3 pr-6 font-medium">{t("portfolio.thMarketVal")}</th>
+                    <th className="pb-3 pr-4 font-medium">{t("portfolio.thHerd")}</th>
+                    <th className="pb-3 pr-4 font-medium">{t("portfolio.thTokens")}</th>
+                    <th className="pb-3 pr-4 font-medium">{t("portfolio.thListed")}</th>
+                    <th className="pb-3 pr-4 font-medium">{t("portfolio.thShare")}</th>
+                    <th className="pb-3 pr-4 font-medium">{t("portfolio.thPendingDivs")}</th>
+                    <th className="pb-3 pr-4 font-medium">{t("portfolio.thMarketVal")}</th>
                     <th className="pb-3 font-medium">{t("portfolio.thAction")}</th>
                   </tr>
                 </thead>
@@ -136,12 +136,12 @@ export default function PortfolioPage() {
 
                     return (
                       <tr key={position.herdId} className="border-b border-border last:border-0">
-                        <td className="py-4 pr-6 font-medium">{t(`herds.${position.herdId}.name`, position.herdName)}</td>
-                        <td className="py-4 pr-6">{formatNumber(position.tokensOwned)}</td>
-                        <td className="py-4 pr-6">{formatNumber(position.listedTokens)}</td>
-                        <td className="py-4 pr-6">{share.toFixed(2)}%</td>
-                        <td className="py-4 pr-6 text-primary">{formatCurrency(position.pendingDividendsUsd)}</td>
-                        <td className="py-4 pr-6">{formatCurrency(marketValue)}</td> 
+                        <td className="py-4 pr-4 font-medium">{t(`herds.${position.herdId}.name`, position.herdName)}</td>
+                        <td className="py-4 pr-4">{formatNumber(position.tokensOwned)}</td>
+                        <td className="py-4 pr-4">{formatNumber(position.listedTokens)}</td>
+                        <td className="py-4 pr-4">{share.toFixed(2)}%</td>
+                        <td className="py-4 pr-4 text-primary">{formatCurrency(position.pendingDividendsUsd)}</td>
+                        <td className="py-4 pr-4">{formatCurrency(marketValue)}</td> 
                         <td className="py-4">
                           <Button variant="ghost" size="sm" asChild>
                             <Link href={`/herd/${position.herdId}`}>
@@ -158,7 +158,7 @@ export default function PortfolioPage() {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="col-span-1">
           <CardHeader>
             <CardTitle>{t("portfolio.claimQueue")}</CardTitle>
           </CardHeader>

@@ -192,10 +192,6 @@ export default function FarmerProfilePage() {
                   {herds.length} {herds.length === 1 ? t('farmer.farmSingular') : t('farmer.farmsPlural')}
                 </Badge>
               </div>
-              <p className="flex items-center gap-1.5 text-sm text-muted-foreground">
-                <Users className="h-3.5 w-3.5" />
-                {formatNumber(investorCount)} {t('farmer.investorsPlural')}
-              </p>
 
               <div className="flex flex-wrap gap-3 text-sm">
                 <div className="flex items-center gap-2 rounded-lg bg-muted px-3 py-1.5">
@@ -218,10 +214,6 @@ export default function FarmerProfilePage() {
                 <span className="flex items-center gap-1">
                   <Calendar className="h-4 w-4" />
                   April 2026
-                </span>
-                <span className="flex items-center gap-1">
-                  <Users className="h-4 w-4" />
-                  {formatNumber(investorCount)} {t('farmer.investorsPlural')}
                 </span>
                 <span className="flex items-center gap-1">
                   <Activity className="h-4 w-4" />
