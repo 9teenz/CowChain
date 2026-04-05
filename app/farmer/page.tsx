@@ -5,6 +5,8 @@ import { useSession } from 'next-auth/react'
 import { useTranslation } from 'react-i18next'
 import {
   Activity,
+  ArrowDown,
+  ArrowRight,
   ArrowUpRight,
   Award,
   Banknote,
@@ -12,6 +14,9 @@ import {
   Beef,
   Calendar,
   Check,
+  ChevronDown,
+  ChevronRight,
+  Coins,
   Copy,
   DollarSign,
   Milk,
@@ -19,6 +24,7 @@ import {
   RefreshCw,
   TrendingUp,
   Users,
+  Users2,
   Wallet,
 } from 'lucide-react'
 import { StatCard } from '@/components/stat-card'
@@ -44,6 +50,7 @@ import { Label } from '@/components/ui/label'
 import { useDemoState } from '@/components/demo-state-provider'
 import { shortenWallet } from '@/lib/solana-contract'
 import { formatCurrency, formatNumber } from '@/lib/utils'
+import type { CowAddEvent, CowSaleEvent } from '@/lib/demo-data'
 import {
   Area,
   AreaChart,
@@ -73,13 +80,17 @@ function activityIcon(kind: string) {
   }
 }
 
+type HistoryEntry =
+  | { type: 'sale'; date: string; event: CowSaleEvent }
+  | { type: 'add';  date: string; event: CowAddEvent }
+
 const INCOME_MONTHS = ['Oct', 'Nov', 'Dec', 'Jan', 'Feb', 'Mar', 'Apr']
 
 export default function FarmerProfilePage() {
   const { data: session } = useSession()
   const { t } = useTranslation()
   const {
-    state: { herds, positions, sales, transactions, wallet },
+    state: { herds, positions, sales, addEvents, investors, transactions, wallet, platform },
     simulateCowSale,
     addCowsToHerd,
     updateMilkRevenue,
@@ -89,6 +100,7 @@ export default function FarmerProfilePage() {
   const [copied, setCopied] = useState(false)
   const [modal, setModal] = useState<ModalState>({ kind: null, herdId: '' })
   const [feedback, setFeedback] = useState<{ ok: boolean; msg: string } | null>(null)
+  const [expandedSale, setExpandedSale] = useState<string | null>(null)
 
   const [cowCount, setCowCount]       = useState('3')
   const [cowCost, setCowCost]         = useState('1200')
@@ -103,6 +115,15 @@ export default function FarmerProfilePage() {
   const totalAnnualMilk  = herds.reduce((s, h) => s + h.expectedAnnualRevenueUsd, 0)
   const totalMonthlyMilk = Math.round(totalAnnualMilk / 12)
   const investorCount    = positions.length
+
+  // Live token price: NAV = Total Herd Value / Total Supply
+  const tokenPriceUsd    = platform.totalSupply > 0 ? totalNAV / platform.totalSupply : 0
+
+  // Combined sorted event history (sales + cow additions)
+  const historyEntries: HistoryEntry[] = [
+    ...sales.map((e) => ({ type: 'sale' as const, date: e.saleDate, event: e })),
+    ...(addEvents ?? []).map((e) => ({ type: 'add' as const, date: e.addDate, event: e })),
+  ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
 
   const incomeChartData = INCOME_MONTHS.map((month, i) => {
     const row: Record<string, number | string> = { month }
@@ -233,7 +254,7 @@ export default function FarmerProfilePage() {
       </Card>
 
       {/* KPI Row */}
-      <div className="mb-8 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+      <div className="mb-8 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard
           title={t('farmer.totalCows')}
           value={formatNumber(totalCows)}
@@ -255,6 +276,13 @@ export default function FarmerProfilePage() {
           changeType="positive"
           icon={Milk}
         />
+        <StatCard
+          title="Цена токена (NAV)"
+          value={`$${tokenPriceUsd.toFixed(2)}`}
+          change={`${formatNumber(platform.totalSupply)} токенов • NAV = Стоимость ÷ Супплай`}
+          changeType="positive"
+          icon={Coins}
+        />
       </div>
 
       {/* Tabs */}
@@ -268,6 +296,12 @@ export default function FarmerProfilePage() {
           </TabsTrigger>
           <TabsTrigger value="activity" className="gap-1.5">
             <Activity className="h-4 w-4" /> {t('farmer.tabActivity')}
+          </TabsTrigger>
+          <TabsTrigger value="history" className="gap-1.5">
+            <Beef className="h-4 w-4" /> История
+          </TabsTrigger>
+          <TabsTrigger value="investors" className="gap-1.5">
+            <Users2 className="h-4 w-4" /> Инвесторы
           </TabsTrigger>
         </TabsList>
 
@@ -486,6 +520,299 @@ export default function FarmerProfilePage() {
                 </div>
               </CardContent>
             </Card>
+          </div>
+        </TabsContent>
+
+        {/* HISTORY — sales + additions unified timeline */}
+        <TabsContent value="history">
+          <div className="space-y-4">
+            {historyEntries.length === 0 && (
+              <p className="py-12 text-center text-sm text-muted-foreground">Нет событий. Добавьте или продайте коров, чтобы увидеть историю.</p>
+            )}
+            {historyEntries.map((entry) => {
+              if (entry.type === 'sale') {
+                const s = entry.event
+                const isExpanded = expandedSale === s.id
+                return (
+                  <Card key={s.id} className="overflow-hidden">
+                    <CardHeader className="pb-3">
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="flex items-center gap-3">
+                          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-amber-100 dark:bg-amber-900/40">
+                            <ArrowUpRight className="h-5 w-5 text-amber-600 dark:text-amber-400" />
+                          </div>
+                          <div>
+                            <p className="font-semibold text-sm">Продажа коровы — {s.herdName}</p>
+                            <p className="text-xs text-muted-foreground font-mono">{s.cowTag} · {new Date(s.saleDate).toLocaleDateString('ru-RU')}</p>
+                          </div>
+                        </div>
+                        <div className="text-right shrink-0">
+                          <p className="font-bold text-emerald-600 dark:text-emerald-400">{formatCurrency(s.salePriceUsd)}</p>
+                          <Coins className="ml-auto h-3.5 w-3.5 text-muted-foreground" />
+                        </div>
+                      </div>
+                    </CardHeader>
+                    <CardContent className="space-y-3">
+                      <div className="flex flex-wrap items-center gap-6 rounded-lg bg-muted/50 px-4 py-3 text-sm">
+                        <div>
+                          <p className="text-xs text-muted-foreground">Дивиденд / токен</p>
+                          <p className="font-mono font-semibold text-primary">${s.dividendPerTokenUsd.toFixed(6)}</p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-muted-foreground">NAV до</p>
+                          <p className="font-mono">${s.navBeforeUsd.toFixed(2)}</p>
+                        </div>
+                        <ArrowRight className="h-4 w-4 text-muted-foreground" />
+                        <div>
+                          <p className="text-xs text-muted-foreground">NAV после</p>
+                          <p className={`font-mono font-semibold ${s.navAfterUsd < s.navBeforeUsd ? 'text-amber-500' : 'text-emerald-500'}`}>
+                            ${s.navAfterUsd.toFixed(2)}
+                          </p>
+                        </div>
+                        <div className="ml-auto text-xs text-muted-foreground">
+                          {s.settlementCurrency}
+                        </div>
+                      </div>
+
+                      {(s.investorDividends ?? []).length > 0 && (
+                        <>
+                          <button
+                            onClick={() => setExpandedSale(isExpanded ? null : s.id)}
+                            className="flex w-full items-center justify-between rounded-lg border border-border px-4 py-2.5 text-sm hover:bg-muted/40 transition-colors"
+                          >
+                            <span className="flex items-center gap-2 font-medium">
+                              <Users className="h-4 w-4 text-muted-foreground" />
+                              Выплаты инвесторам ({(s.investorDividends ?? []).length})
+                            </span>
+                            {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                          </button>
+
+                          {isExpanded && (
+                            <div className="overflow-x-auto rounded-lg border border-border">
+                              <table className="w-full text-sm">
+                                <thead>
+                                  <tr className="border-b border-border bg-muted/30 text-left text-muted-foreground">
+                                    <th className="px-4 py-2.5 font-medium">Инвестор</th>
+                                    <th className="px-4 py-2.5 font-medium">Токены</th>
+                                    <th className="px-4 py-2.5 font-medium">× {s.dividendPerTokenUsd.toFixed(6)}</th>
+                                    <th className="px-4 py-2.5 font-medium">Дивиденд</th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  {(s.investorDividends ?? []).map((inv) => (
+                                    <tr key={inv.investorId} className="border-b border-border last:border-0">
+                                      <td className="px-4 py-3">
+                                        <div className="flex items-center gap-2">
+                                          <div className="flex h-7 w-7 items-center justify-center rounded-full bg-primary/10 text-[11px] font-bold text-primary">
+                                            {inv.investorName.split(' ').map((n) => n[0]).join('')}
+                                          </div>
+                                          <span className="font-medium">{inv.investorName}</span>
+                                        </div>
+                                      </td>
+                                      <td className="px-4 py-3 font-mono text-xs">{formatNumber(inv.tokensOwned)}</td>
+                                      <td className="px-4 py-3 text-muted-foreground text-xs">
+                                        {formatNumber(inv.tokensOwned)} × ${s.dividendPerTokenUsd.toFixed(4)}
+                                      </td>
+                                      <td className="px-4 py-3 font-bold text-emerald-600 dark:text-emerald-400">
+                                        {formatCurrency(inv.dividendUsd)}
+                                      </td>
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
+                            </div>
+                          )}
+                        </>
+                      )}
+                    </CardContent>
+                  </Card>
+                )
+              }
+
+              // add event
+              const a = entry.event
+              return (
+                <Card key={a.id}>
+                  <CardHeader className="pb-3">
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="flex items-center gap-3">
+                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-emerald-100 dark:bg-emerald-900/40">
+                          <ArrowDown className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
+                        </div>
+                        <div>
+                          <p className="font-semibold text-sm">Добавлено коров — {a.herdName}</p>
+                          <p className="text-xs text-muted-foreground">{new Date(a.addDate).toLocaleDateString('ru-RU')}</p>
+                        </div>
+                      </div>
+                      <div className="text-right shrink-0">
+                        <p className="font-bold text-emerald-600 dark:text-emerald-400">+{a.count} коров</p>
+                        <p className="text-xs text-muted-foreground">{formatCurrency(a.totalCostUsd)}</p>
+                      </div>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="flex flex-wrap items-center gap-6 rounded-lg bg-muted/50 px-4 py-3 text-sm">
+                      <div>
+                        <p className="text-xs text-muted-foreground">Цена / корова</p>
+                        <p className="font-semibold">{formatCurrency(a.costPerCowUsd)}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-muted-foreground">Итого</p>
+                        <p className="font-semibold">{formatCurrency(a.totalCostUsd)}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-muted-foreground">NAV до</p>
+                        <p className="font-mono">${a.navBeforeUsd.toFixed(2)}</p>
+                      </div>
+                      <ArrowRight className="h-4 w-4 text-muted-foreground" />
+                      <div>
+                        <p className="text-xs text-muted-foreground">NAV после</p>
+                        <p className={`font-mono font-semibold ${a.navAfterUsd > a.navBeforeUsd ? 'text-emerald-500' : 'text-muted-foreground'}`}>
+                          ${a.navAfterUsd.toFixed(2)}
+                        </p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              )
+            })}
+          </div>
+        </TabsContent>
+
+        {/* INVESTORS */}
+        <TabsContent value="investors">
+          <div className="space-y-6">
+            <div className="grid gap-4 sm:grid-cols-3">
+              <StatCard
+                title="Всего инвесторов"
+                value={formatNumber((investors ?? []).length)}
+                change="Держатели токенов CowChain"
+                changeType="neutral"
+                icon={Users2}
+              />
+              <StatCard
+                title="Токены у инвесторов"
+                value={formatNumber((investors ?? []).reduce((s, i) => s + i.tokensOwned, 0))}
+                change={`из ${formatNumber(platform.totalSupply)} всего`}
+                changeType="neutral"
+                icon={Coins}
+              />
+              <StatCard
+                title="Ожидающие дивиденды"
+                value={formatCurrency((investors ?? []).reduce((s, i) => s + i.pendingDividendsUsd, 0))}
+                change="Сумма по всем инвесторам"
+                changeType="positive"
+                icon={Wallet}
+              />
+            </div>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <Users2 className="h-4 w-4 text-primary" />
+                  Инвесторы платформы
+                </CardTitle>
+                <CardDescription>
+                  Формула: Дивиденд = Цена продажи ÷ Всего токенов × Токены инвестора
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="overflow-x-auto">
+                  <table className="w-full min-w-[640px] text-sm">
+                    <thead>
+                      <tr className="border-b border-border text-left text-muted-foreground">
+                        <th className="pb-3 font-medium">Инвестор</th>
+                        <th className="pb-3 font-medium">Кошелёк</th>
+                        <th className="pb-3 font-medium">Токены</th>
+                        <th className="pb-3 font-medium">Доля</th>
+                        <th className="pb-3 font-medium">Получено всего</th>
+                        <th className="pb-3 font-medium">Ожидает выплаты</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {(investors ?? []).map((inv) => {
+                        const share = platform.totalSupply > 0 ? (inv.tokensOwned / platform.totalSupply) * 100 : 0
+                        const totalEarned = inv.claimedDividendsUsd + inv.pendingDividendsUsd
+                        return (
+                          <tr key={inv.id} className="border-b border-border last:border-0">
+                            <td className="py-4">
+                              <div className="flex items-center gap-3">
+                                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-sm font-bold text-primary">
+                                  {inv.avatarInitials}
+                                </div>
+                                <span className="font-medium">{inv.name}</span>
+                              </div>
+                            </td>
+                            <td className="py-4 font-mono text-xs text-muted-foreground">{shortenWallet(inv.walletAddress)}</td>
+                            <td className="py-4 font-semibold">{formatNumber(inv.tokensOwned)}</td>
+                            <td className="py-4 text-muted-foreground">{share.toFixed(2)}%</td>
+                            <td className="py-4 text-sky-600 dark:text-sky-400">{formatCurrency(totalEarned)}</td>
+                            <td className="py-4">
+                              <span className={`font-semibold ${inv.pendingDividendsUsd > 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-muted-foreground'}`}>
+                                {formatCurrency(inv.pendingDividendsUsd)}
+                              </span>
+                            </td>
+                          </tr>
+                        )
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </CardContent>
+            </Card>
+
+            {sales.length > 0 && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-base">
+                    <Beef className="h-4 w-4 text-amber-500" />
+                    История выплат по продажам
+                  </CardTitle>
+                  <CardDescription>
+                    Цена продажи ÷ Всего токенов = Дивиденд на токен → × Токены инвестора = Выплата
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {sales.map((s) => (
+                    <div key={s.id} className="overflow-hidden rounded-xl border border-border">
+                      <div className="flex items-center justify-between gap-4 bg-muted/40 px-4 py-3">
+                        <div className="flex items-center gap-2">
+                          <ArrowUpRight className="h-4 w-4 text-amber-500" />
+                          <span className="font-semibold text-sm">{s.herdName} — {s.cowTag}</span>
+                          <span className="text-xs text-muted-foreground">{new Date(s.saleDate).toLocaleDateString('ru-RU')}</span>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <span className="rounded bg-primary/10 px-2 py-0.5 font-mono text-xs text-primary">
+                            ${s.dividendPerTokenUsd.toFixed(6)}/token
+                          </span>
+                          <span className="font-bold text-emerald-600 dark:text-emerald-400">{formatCurrency(s.salePriceUsd)}</span>
+                        </div>
+                      </div>
+                      <div className="divide-y divide-border">
+                        {(s.investorDividends ?? []).map((inv) => (
+                          <div key={inv.investorId} className="flex items-center justify-between gap-4 px-4 py-3 text-sm">
+                            <div className="flex items-center gap-2.5">
+                              <div className="flex h-7 w-7 items-center justify-center rounded-full bg-primary/10 text-[11px] font-bold text-primary">
+                                {inv.investorName.split(' ').map((n) => n[0]).join('')}
+                              </div>
+                              <span className="font-medium">{inv.investorName}</span>
+                            </div>
+                            <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                              <span>{formatNumber(inv.tokensOwned)} тк</span>
+                              <ArrowRight className="h-3 w-3" />
+                              <span className="text-sm font-bold text-foreground">{formatCurrency(inv.dividendUsd)}</span>
+                            </div>
+                          </div>
+                        ))}
+                        {(s.investorDividends ?? []).length === 0 && (
+                          <p className="px-4 py-3 text-xs text-muted-foreground">Нет данных об инвесторах для этой продажи.</p>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </CardContent>
+              </Card>
+            )}
           </div>
         </TabsContent>
 

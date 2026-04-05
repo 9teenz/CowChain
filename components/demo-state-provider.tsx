@@ -161,6 +161,7 @@ export function DemoStateProvider({ children }: { children: ReactNode }) {
   const { data: session, status: sessionStatus } = useSession()
   const [state, setState] = useState<DemoState>(initialDemoState)
   const [isHydrated, setIsHydrated] = useState(false)
+  const [onChainTotalSupply, setOnChainTotalSupply] = useState<number | null>(null)
 
   useEffect(() => {
     try {
@@ -813,16 +814,40 @@ export function DemoStateProvider({ children }: { children: ReactNode }) {
       return { ok: false, message: 'Herd not found.' }
     }
 
-    setState((current) => ({
-      ...current,
-      herds: current.herds.map((item) =>
-        item.id === herdId
-          ? { ...item, expectedAnnualRevenueUsd: Number(newAnnualRevenueUsd.toFixed(2)) }
-          : item
-      ),
-    }))
+    setState((current) => {
+      const target = current.herds.find((item) => item.id === herdId)
+      if (!target || target.expectedAnnualRevenueUsd <= 0) {
+        return {
+          ...current,
+          herds: current.herds.map((item) =>
+            item.id === herdId
+              ? { ...item, expectedAnnualRevenueUsd: Number(newAnnualRevenueUsd.toFixed(2)) }
+              : item
+          ),
+        }
+      }
 
-    return { ok: true, message: `Milk revenue updated for ${herd.name}.` }
+      // Scale herd asset value proportionally: more milk revenue = more valuable herd
+      const scalingFactor = newAnnualRevenueUsd / target.expectedAnnualRevenueUsd
+      const newTotalValueUsd = Number((target.totalValueUsd * scalingFactor).toFixed(2))
+      const newNavPerTokenUsd = Number((target.navPerTokenUsd * scalingFactor).toFixed(6))
+
+      return {
+        ...current,
+        herds: current.herds.map((item) =>
+          item.id === herdId
+            ? {
+                ...item,
+                expectedAnnualRevenueUsd: Number(newAnnualRevenueUsd.toFixed(2)),
+                totalValueUsd: newTotalValueUsd,
+                navPerTokenUsd: newNavPerTokenUsd,
+              }
+            : item
+        ),
+      }
+    })
+
+    return { ok: true, message: `Milk revenue updated for ${herd.name}. Token price updated.` }
   }
 
   useEffect(() => {
@@ -881,6 +906,81 @@ export function DemoStateProvider({ children }: { children: ReactNode }) {
     state.wallet.connected,
     state.wallet.walletAddress,
   ])
+
+  // Fetch on-chain token supply from Solana blockchain periodically
+  useEffect(() => {
+    if (!isHydrated) {
+      return
+    }
+
+    const mintAddress = state.platform.mint?.trim()
+    if (!mintAddress) {
+      return
+    }
+
+    let isCancelled = false
+
+    const syncOnChainSupply = async () => {
+      try {
+        const params = new URLSearchParams({ mint: mintAddress, cluster: 'auto' })
+        const response = await fetch(`/api/token-supply?${params.toString()}`, { cache: 'no-store' })
+        const data = (await response.json()) as { ok?: boolean; amount?: number }
+        if (isCancelled) {
+          return
+        }
+        if (response.ok && data.ok && typeof data.amount === 'number' && data.amount > 0) {
+          setOnChainTotalSupply(data.amount)
+        }
+      } catch {
+        // silent — fall back to demo supply
+      }
+    }
+
+    void syncOnChainSupply()
+    const interval = setInterval(() => void syncOnChainSupply(), 30_000)
+
+    return () => {
+      isCancelled = true
+      clearInterval(interval)
+    }
+  }, [isHydrated, state.platform.mint])
+
+  // Recompute platform NAV whenever herd values or on-chain supply changes.
+  // Formula: NAV per token = Total Herd Value / On-chain Total Supply
+  // This propagates to ALL pages since they read platform.navPerTokenUsd from context.
+  useEffect(() => {
+    if (!isHydrated) {
+      return
+    }
+
+    setState((current) => {
+      const totalHerdValue = current.herds.reduce((sum, h) => sum + h.totalValueUsd, 0)
+      const supply = onChainTotalSupply ?? current.platform.totalSupply
+      if (supply <= 0) {
+        return current
+      }
+
+      const newNavPerTokenUsd = Number((totalHerdValue / supply).toFixed(6))
+      const newTotalSupply = onChainTotalSupply ?? current.platform.totalSupply
+
+      if (
+        current.platform.navPerTokenUsd === newNavPerTokenUsd &&
+        current.platform.totalSupply === newTotalSupply
+      ) {
+        return current
+      }
+
+      return {
+        ...current,
+        platform: {
+          ...current.platform,
+          totalSupply: newTotalSupply,
+          navPerTokenUsd: newNavPerTokenUsd,
+        },
+      }
+    })
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isHydrated, state.herds, onChainTotalSupply])
 
   const portfolioSummary = useMemo(() => {
     const positions = state.positions ?? initialDemoState.positions
