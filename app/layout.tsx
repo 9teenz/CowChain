@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import { Geist, Geist_Mono } from 'next/font/google'
 import { Analytics } from '@vercel/analytics/next'
 import { ThemeProvider } from '@/components/theme-provider'
+import { I18nProvider } from '@/components/i18n-provider'
 import { DemoStateProvider } from '@/components/demo-state-provider'
 import { AuthSessionProvider } from '@/components/auth-session-provider'
 import { Navbar } from '@/components/navbar'
@@ -29,6 +30,7 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body className="font-sans antialiased" suppressHydrationWarning>
+        <I18nProvider>
         <ThemeProvider
           attribute="class"
           defaultTheme="system"
@@ -37,14 +39,17 @@ export default function RootLayout({
         >
           <AuthSessionProvider>
             <DemoStateProvider>
-              <Navbar />
-              <main className="min-h-screen pt-16">
-                {children}
-              </main>
-              <Footer />
+              <div className="flex flex-col min-h-screen">
+                <Navbar />
+                <main className="flex-grow pt-16">
+                  {children}
+                </main>
+                <Footer />
+              </div>
             </DemoStateProvider>
           </AuthSessionProvider>
         </ThemeProvider>
+        </I18nProvider>
         <Analytics />
       </body>
     </html>

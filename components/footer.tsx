@@ -1,32 +1,38 @@
+'use client'
+
 import Link from 'next/link'
 import { CowIcon } from '@/components/icons/cow-icon'
-
-const footerLinks = {
-  platform: [
-    { label: 'Dashboard', href: '/' },
-    { label: 'Marketplace', href: '/marketplace' },
-    { label: 'Portfolio', href: '/portfolio' },
-    { label: 'Analytics', href: '/analytics' },
-  ],
-  resources: [
-    { label: 'Documentation', href: '/documentation' },
-    { label: 'FAQ', href: '/faq' },
-  ],
-  company: [
-    { label: 'Contact', href: '/contact' },
-  ],
-  contacts: [
-    { label: 'Роман Русланович', href: 'https://t.me/romasishu' },
-    { label: 'Евгений Александрович', href: 'https://t.me/scxlpxr' },
-    { label: 'Сергей Александрович', href: 'https://t.me/IQiwei' },
-  ],
-  legal: [
-    { label: 'Privacy Policy', href: '/privacy-policy' },
-    { label: 'Terms of Service', href: '/terms-of-service' },
-  ],
-}
+import { useTranslation } from 'react-i18next'
+import { Send } from 'lucide-react'
 
 export function Footer() {
+  const { t } = useTranslation()
+
+  const footerLinks = {
+    platform: [
+      { label: t('nav.dashboard'), href: '/' },
+      { label: t('nav.marketplace'), href: '/marketplace' },
+      { label: t('nav.portfolio'), href: '/portfolio' },
+      { label: t('nav.analytics'), href: '/analytics' },
+    ],
+    resources: [
+      { label: t('nav.documentation'), href: '/documentation' },
+      { label: t('nav.faq'), href: '/faq' },
+    ],
+    company: [
+      { label: t('nav.contact'), href: '/contact' },
+    ],
+    contacts: [
+      { label: t('footer.devRoman'), href: 'https://t.me/romasishu' },
+      { label: t('footer.devEvgeny'), href: 'https://t.me/scxlpxr' },
+      { label: t('footer.devSergey'), href: 'https://t.me/IQiwei' },
+    ],
+    legal: [
+      { label: t('nav.privacyPolicy'), href: '/privacy-policy' },
+      { label: t('nav.termsOfService'), href: '/terms-of-service' },
+    ],
+  }
+
   return (
     <footer className="border-t border-border bg-card">
       <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
@@ -38,13 +44,13 @@ export function Footer() {
               <span className="text-xl font-bold text-foreground">CowChain</span>
             </Link>
             <p className="mt-4 text-sm text-muted-foreground">
-              Tokenize herd pools, trade SPL herd shares, and stream dividends after each cow sale.
+              {t('footer.description')}
             </p>
           </div>
 
           {/* Platform Links */}
           <div>
-            <h3 className="text-sm font-semibold text-foreground">Platform</h3>
+            <h3 className="text-sm font-semibold text-foreground">{t('nav.platform')}</h3>
             <ul className="mt-4 space-y-3">
               {footerLinks.platform.map((link) => (
                 <li key={link.label}>
@@ -61,7 +67,7 @@ export function Footer() {
 
           {/* Resources Links */}
           <div>
-            <h3 className="text-sm font-semibold text-foreground">Resources</h3>
+            <h3 className="text-sm font-semibold text-foreground">{t('nav.resources')}</h3>
             <ul className="mt-4 space-y-3">
               {footerLinks.resources.map((link) => (
                 <li key={link.label}>
@@ -78,7 +84,7 @@ export function Footer() {
 
           {/* Company Links */}
           <div>
-            <h3 className="text-sm font-semibold text-foreground">Company</h3>
+            <h3 className="text-sm font-semibold text-foreground">{t('nav.company')}</h3>
             <ul className="mt-4 space-y-3">
               {footerLinks.company.map((link) => (
                 <li key={link.label}>
@@ -95,7 +101,7 @@ export function Footer() {
 
           {/* Contacts */}
           <div>
-            <h3 className="text-sm font-semibold text-foreground">Contacts</h3>
+            <h3 className="text-sm font-semibold text-foreground">{t('nav.contacts')}</h3>
             <ul className="mt-4 space-y-3">
               {footerLinks.contacts.map((dev) => (
                 <li key={dev.label}>
@@ -117,7 +123,7 @@ export function Footer() {
 
           {/* Legal Links */}
           <div>
-            <h3 className="text-sm font-semibold text-foreground">Legal</h3>
+            <h3 className="text-sm font-semibold text-foreground">{t('nav.legal')}</h3>
             <ul className="mt-4 space-y-3">
               {footerLinks.legal.map((link) => (
                 <li key={link.label}>
@@ -136,7 +142,7 @@ export function Footer() {
         {/* Bottom Section */}
         <div className="mt-12 flex flex-col items-center justify-between gap-4 border-t border-border pt-8 md:flex-row">
           <p className="text-sm text-muted-foreground">
-            &copy; 2026 CowChain. All rights reserved.
+            &copy; 2026 CowChain. {t('footer.allRightsReserved')}
           </p>
           <div className="flex items-center gap-6">
             <span className="text-sm text-muted-foreground">QuadCore Solutions</span>

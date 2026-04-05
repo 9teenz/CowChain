@@ -1,3 +1,4 @@
+'use client'
 const developers = [
   {
     name: 'Роман Русланович',
@@ -24,12 +25,15 @@ function TelegramIcon({ className }: { className?: string }) {
   )
 }
 
+import { useTranslation } from 'react-i18next'
+
 export default function ContactPage() {
+  const { t } = useTranslation()
   return (
     <div className="mx-auto max-w-3xl px-4 py-10 sm:px-6 lg:px-8">
-      <h1 className="text-3xl font-bold tracking-tight text-foreground">Contact</h1>
+      <h1 className="text-3xl font-bold tracking-tight text-foreground">{t('contact.title')}</h1>
       <p className="mt-3 text-muted-foreground">
-        Свяжитесь с командой разработчиков MilkChain напрямую через Telegram.
+        {t('contact.desc')}
       </p>
 
       <div className="mt-8 grid gap-4 sm:grid-cols-3">

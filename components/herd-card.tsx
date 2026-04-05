@@ -6,12 +6,14 @@ import { formatNumber, formatCurrency } from '@/lib/utils'
 import type { HerdPool } from '@/lib/demo-data'
 import { PLATFORM_TOKEN_SYMBOL } from '@/lib/demo-data'
 import { useDemoState } from '@/components/demo-state-provider'
+import { useTranslation } from 'react-i18next'
 
 interface HerdCardProps {
   herd: HerdPool
 }
 
 export function HerdCard({ herd }: HerdCardProps) {
+  const { t } = useTranslation()
   const milkPerMonth = herd.milkProductionLitersPerDay * 30
 
   return (
@@ -19,8 +21,8 @@ export function HerdCard({ herd }: HerdCardProps) {
       <CardHeader className="pb-4">
         <div className="flex items-start justify-between">
           <div>
-            <CardTitle className="text-lg">{herd.name}</CardTitle>
-            <p className="mt-1 text-sm text-muted-foreground">{herd.location}</p>
+            <CardTitle className="text-lg">{t(`herds.${herd.id}.name`, herd.name)}</CardTitle>
+            <p className="mt-1 text-sm text-muted-foreground">{t(`herds.${herd.id}.location`, herd.location)}</p>
           </div>
           <div className="flex flex-col items-end gap-1.5">
             <div className="rounded-full border border-border px-3 py-1 text-xs font-semibold text-muted-foreground">
@@ -40,14 +42,14 @@ export function HerdCard({ herd }: HerdCardProps) {
           <div className="flex items-center gap-2 rounded-lg bg-secondary/50 p-2.5">
             <Users className="h-4 w-4 text-muted-foreground" />
             <div>
-              <p className="text-xs text-muted-foreground">Herd Size</p>
-              <p className="font-semibold">{herd.herdSize} cows</p>
+              <p className="text-xs text-muted-foreground">{t('herdCard.herdSize')}</p>
+              <p className="font-semibold">{herd.herdSize} {t('herdCard.cows')}</p>
             </div>
           </div>
           <div className="flex items-center gap-2 rounded-lg bg-secondary/50 p-2.5">
             <DollarSign className="h-4 w-4 text-muted-foreground" />
             <div>
-              <p className="text-xs text-muted-foreground">Total Value</p>
+              <p className="text-xs text-muted-foreground">{t('herdCard.totalValue')}</p>
               <p className="font-semibold">{formatCurrency(herd.totalValueUsd)}</p>
             </div>
           </div>
@@ -56,8 +58,8 @@ export function HerdCard({ herd }: HerdCardProps) {
         <div className="mt-auto flex items-center gap-3 rounded-lg border border-primary/20 bg-primary/5 p-3">
           <Droplets className="h-5 w-5 shrink-0 text-primary" />
           <div>
-            <p className="text-xs text-muted-foreground">Milk volume / month</p>
-            <p className="text-lg font-bold text-primary">{formatNumber(milkPerMonth)} L</p>
+            <p className="text-xs font-medium text-muted-foreground">{t('herdCard.milkVolume')}</p>
+            <p className="font-bold text-primary">{formatNumber(milkPerMonth)} {t('herdCard.l')}</p>
           </div>
         </div>
       </CardContent>

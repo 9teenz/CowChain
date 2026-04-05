@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useTheme } from 'next-themes'
+import { useTranslation } from 'react-i18next'
 import { useSession } from 'next-auth/react'
 import { Sun, Moon, Wallet, Menu, X, User, Coins, RefreshCw, ShieldCheck } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -12,6 +13,7 @@ import { useState, useEffect } from 'react'
 import { CowIcon } from '@/components/icons/cow-icon'
 import { useDemoState } from '@/components/demo-state-provider'
 import { shortenWallet } from '@/lib/solana-contract'
+import { LanguageSwitcher } from '@/components/language-switcher'
 
 type Cluster = 'mainnet-beta' | 'devnet' | 'testnet'
 type PhantomRequestProvider = {
@@ -21,14 +23,14 @@ function isCluster(value: unknown): value is Cluster {
   return value === 'mainnet-beta' || value === 'devnet' || value === 'testnet'
 }
 
-const navLinks = [
-  { href: '/', label: 'Dashboard' },
-  { href: '/marketplace', label: 'Marketplace' },
-  { href: '/portfolio', label: 'Portfolio' },
-  { href: '/analytics', label: 'Analytics' },
-]
-
 export function Navbar() {
+  const { t } = useTranslation()
+  const navLinks = [
+    { href: '/', label: t('nav.home') },
+    { href: '/marketplace', label: t('nav.marketplace') },
+    { href: '/portfolio', label: t('nav.portfolio') },
+    { href: '/analytics', label: t('nav.analytics') },
+  ]
   const pathname = usePathname()
   const { theme, setTheme } = useTheme()
   const {
@@ -115,23 +117,6 @@ export function Navbar() {
 
           {/* Right Side Actions */}
           <div className="flex items-center gap-2">
-            {/* Theme Toggle */}
-            {mounted && (
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-                className="text-muted-foreground hover:text-foreground group"
-              >
-                {theme === 'dark' ? (
-                  <Sun className="h-5 w-5 transition-transform duration-300 group-hover:rotate-45" />
-                ) : (
-                  <Moon className="h-5 w-5 transition-transform duration-300 group-hover:-rotate-12" />
-                )}
-                <span className="sr-only">Toggle theme</span>
-              </Button>
-            )}
-
             {/* Farmer Dashboard Link */}
             {session?.user?.role === 'farmer' && (
               <Button
@@ -160,14 +145,6 @@ export function Navbar() {
                 </Link>
               </Button>
             )}
-
-            {/* Profile Link */}
-            <Button variant="ghost" size="icon" asChild className="hidden sm:flex">
-              <Link href={isAuthenticated ? '/profile' : '/signup'}>
-                <User className="h-5 w-5" />
-                <span className="sr-only">Profile</span>
-              </Link>
-            </Button>
 
             {wallet.connected && (
               <div className="hidden items-center gap-2 rounded-full border border-border bg-card/80 px-3 py-1.5 text-sm text-muted-foreground lg:flex">
@@ -224,6 +201,32 @@ export function Navbar() {
                   </div>
                 </PopoverContent>
               </Popover>
+            )}
+
+            {/* Profile Link */}
+            <Button variant="ghost" size="icon" asChild className="hidden sm:flex">
+              <Link href={isAuthenticated ? '/profile' : '/signup'}>
+                <User className="h-5 w-5" />
+                <span className="sr-only">Profile</span>
+              </Link>
+            </Button>
+
+            {mounted && <LanguageSwitcher />}
+            {/* Theme Toggle */}
+            {mounted && (
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+                className="text-muted-foreground hover:text-foreground group"
+              >
+                {theme === 'dark' ? (
+                  <Sun className="h-5 w-5 transition-transform duration-300 group-hover:rotate-45" />
+                ) : (
+                  <Moon className="h-5 w-5 transition-transform duration-300 group-hover:-rotate-12" />
+                )}
+                <span className="sr-only">Toggle theme</span>
+              </Button>
             )}
 
             {/* Mobile Menu Button */}

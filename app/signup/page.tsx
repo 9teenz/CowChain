@@ -1,10 +1,11 @@
-'use client'
+﻿'use client'
 
 import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { signIn } from 'next-auth/react'
 import { CowIcon } from '@/components/icons/cow-icon'
+import { useTranslation } from 'react-i18next'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -12,6 +13,7 @@ import { Label } from '@/components/ui/label'
 import { Mail, Lock, Eye, EyeOff, User, Check } from 'lucide-react'
 
 export default function SignupPage() {
+  const { t } = useTranslation()
   const router = useRouter()
   const didRunVerification = useRef(false)
   const [showPassword, setShowPassword] = useState(false)
@@ -136,7 +138,7 @@ export default function SignupPage() {
         <CardHeader className="space-y-4 text-center">
           <CowIcon className="mx-auto h-12 w-12" />
           <div>
-            <CardTitle className="text-2xl">Create an account</CardTitle>
+            <CardTitle className="text-2xl">{t('auth.createAccountTitle')}</CardTitle>
             <CardDescription>
               Join CowChain and start investing in real-world livestock assets
             </CardDescription>
@@ -214,7 +216,7 @@ export default function SignupPage() {
               </div>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="email">{t('auth.emailLabel')}</Label>
               <div className="relative">
                 <Mail className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                 <Input
@@ -229,7 +231,7 @@ export default function SignupPage() {
               </div>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
+              <Label htmlFor="password">{t('auth.passwordLabel')}</Label>
               <div className="relative">
                 <Lock className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                 <Input
@@ -398,3 +400,4 @@ export default function SignupPage() {
     </div>
   )
 }
+

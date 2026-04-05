@@ -10,6 +10,7 @@ import { useDemoState } from '@/components/demo-state-provider'
 import { formatCurrency, formatNumber } from '@/lib/utils'
 import { shortenWallet } from '@/lib/solana-contract'
 import { Wallet, TrendingUp, Coins, Users, Sparkles } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 
 type TokenSupplyResponse = {
   ok?: boolean
@@ -19,6 +20,7 @@ type TokenSupplyResponse = {
 }
 
 export default function DashboardPage() {
+  const { t } = useTranslation()
   const {
     state: { herds, listings, sales, wallet, platform },
     portfolioSummary,
@@ -90,65 +92,65 @@ export default function DashboardPage() {
           <div className="space-y-5">
             <div className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-3 py-1 text-sm text-white/80">
               <Sparkles className="h-4 w-4" />
-              SPL herd pools on Solana with real-time dividend routing
+              {t('dashboard.subtitle')}
             </div>
             <div className="space-y-3">
               <h1 className="max-w-3xl text-balance text-4xl font-bold tracking-tight sm:text-5xl">
-                Tokenize herd ownership, trade it peer-to-peer, and stream cow-sale dividends to wallets.
+                {t('dashboard.title')}
               </h1>
               <p className="max-w-2xl text-base text-white/75 sm:text-lg">
-                CowChain models a Solana herd pool where each SPL token is a fractional claim on a cow collective. Buy CowChain tokens, fill market orders, and claim dividends the moment the farm exits livestock.
+                {t('dashboard.description')}
               </p>
             </div>
             <div className="flex flex-wrap gap-3">
               <Button size="lg" variant="outline" className="border-white/20 bg-white/5 text-white hover:bg-white/10" asChild>
-                <Link href="/marketplace">Open Marketplace</Link>
+                <Link href="/marketplace">{t('dashboard.openMarketplace')}</Link>
               </Button>
               <Button size="lg" variant="outline" className="border-white/20 bg-white/5 text-white hover:bg-white/10" asChild>
-                <Link href="/portfolio">View Portfolio</Link>
+                <Link href="/portfolio">{t('dashboard.viewPortfolio')}</Link>
               </Button>
             </div>
           </div>
 
           <Card className="border-white/15 bg-white/10 text-white shadow-none backdrop-blur-md">
             <CardHeader>
-              <CardTitle className="text-xl">Wallet Snapshot</CardTitle>
+              <CardTitle className="text-xl">{t('dashboard.walletSnapshot')}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4 text-sm text-white/80">
               <div className="flex items-center justify-between rounded-2xl border border-white/10 bg-black/15 px-4 py-3">
-                <span>Status</span>
+                <span>{t('dashboard.status')}</span>
                 <span className="font-semibold text-white">
-                  {wallet.connected ? `${wallet.provider} connected` : 'Wallet disconnected'}
+                  {wallet.connected ? t('dashboard.walletConnected', { provider: wallet.provider }) : t('dashboard.walletDisconnected')}
                 </span>
               </div>
               <div className="grid gap-3 sm:grid-cols-2">
                 <div className="rounded-2xl border border-white/10 bg-black/15 p-4">
-                  <p className="text-xs uppercase tracking-[0.18em] text-white/55">Address</p>
+                  <p className="text-xs uppercase tracking-[0.18em] text-white/55">{t('dashboard.address')}</p>
                   <p className="mt-2 font-medium text-white">{wallet.connected ? shortenWallet(wallet.walletAddress) : '—'}</p>
                 </div>
                 <div className="rounded-2xl border border-white/10 bg-black/15 p-4">
-                  <p className="text-xs uppercase tracking-[0.18em] text-white/55">Pending dividends</p>
+                  <p className="text-xs uppercase tracking-[0.18em] text-white/55">{t('dashboard.pendingDividends')}</p>
                   <p className="mt-2 font-medium text-white">{wallet.connected ? formatCurrency(portfolioSummary.pendingDividendsUsd) : '—'}</p>
                 </div>
               </div>
               <div className="rounded-2xl border border-white/10 bg-black/15 p-4">
-                <p className="text-xs uppercase tracking-[0.18em] text-white/55">Your Token Balance</p>
+                <p className="text-xs uppercase tracking-[0.18em] text-white/55">{t('dashboard.yourTokenBalance')}</p>
                 <p className="mt-2 text-2xl font-bold text-white">{wallet.connected ? formatNumber(portfolioSummary.userPlatformTokens) : '—'}</p>
-                <p className="mt-1 text-xs text-white/50">{wallet.connected ? 'CowChain tokens' : 'Connect wallet to view'}</p>
+                <p className="mt-1 text-xs text-white/50">{wallet.connected ? t('dashboard.cowchainTokenPrice', 'CowChain tokens') : t('dashboard.connectWalletToView')}</p>
               </div>
               <div className="flex gap-2">
                 <Button
                   className="flex-1 bg-white text-slate-950 hover:bg-white/90"
                   asChild
                 >
-                  <Link href="/marketplace">Buy CowChain Token</Link>
+                  <Link href="/marketplace">{t('dashboard.buyCowchainToken')}</Link>
                 </Button>
                 <Button
                   className="flex-1 bg-primary text-primary-foreground"
                   onClick={() => claimDividends(wallet.preferredDividendCurrency)}
                   disabled={!wallet.connected || portfolioSummary.pendingDividendsUsd <= 0}
                 >
-                  Claim Pending Dividends
+                  {t('dashboard.claimPendingDividends')}
                 </Button>
               </div>
             </CardContent>
@@ -158,23 +160,27 @@ export default function DashboardPage() {
 
       <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <StatCard
-          title="Total Herd Size"
-          value={`${formatNumber(totalHerdSize)} cows`}
-          change="Across tokenized pools"
+          title={t('dashboard.totalHerdSize')}
+          value={`${formatNumber(totalHerdSize)} ${t('dashboard.cows')}`}
+          change={t('dashboard.acrossTokenizedPools')}
           changeType="neutral"
           icon={Users}
         />
         <StatCard
-          title="Platform Token Supply"
+          title={t('dashboard.platformTokenSupply')}
           value={formatNumber(totalTokens)}
+<<<<<<< Updated upstream
           change={tokenSupplyLabel}
+=======
+          change={t('dashboard.platformTokenSupplyDesc')}
+>>>>>>> Stashed changes
           changeType="neutral"
           icon={Coins}
         />
         <StatCard
-          title="CowChain Price"
+          title={t('dashboard.cowchainPrice')}
           value={formatCurrency(averageNav)}
-          change="CowChain token price"
+          change={t('dashboard.cowchainTokenPrice')}
           changeType="positive"
           icon={TrendingUp}
         />
@@ -184,9 +190,9 @@ export default function DashboardPage() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between">
             <div>
-              <CardTitle>Partners</CardTitle>
+              <CardTitle>{t('dashboard.partners')}</CardTitle>
               <p className="mt-1 text-sm text-muted-foreground">
-                Tokenized herd pools participating in the platform.
+                {t('dashboard.partnersDesc')}
               </p>
             </div>
           </CardHeader>
@@ -202,7 +208,7 @@ export default function DashboardPage() {
         <div className="space-y-6">
           <Card>
             <CardHeader>
-              <CardTitle>Best Market Offers</CardTitle>
+              <CardTitle>{t('dashboard.bestMarketOffers')}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               {topListings.map((listing) => {
@@ -211,8 +217,8 @@ export default function DashboardPage() {
                   <div key={listing.id} className="rounded-2xl border border-border p-4">
                     <div className="flex items-start justify-between gap-3">
                       <div>
-                        <p className="font-semibold">{listing.herdName}</p>
-                        <p className="text-sm text-muted-foreground">Seller {shortenWallet(listing.sellerWallet)}</p>
+                        <p className="font-semibold">{t(`herds.${herd?.id}.name`, listing.herdName)}</p>
+                        <p className="text-sm text-muted-foreground">{t('dashboard.seller')} {shortenWallet(listing.sellerWallet)}</p>
                       </div>
                       <div className="text-right">
                         <p className="font-semibold">{formatCurrency(listing.pricePerTokenUsd)}</p>
@@ -220,9 +226,9 @@ export default function DashboardPage() {
                       </div>
                     </div>
                     <div className="mt-3 flex items-center justify-between text-sm text-muted-foreground">
-                      <span>{formatNumber(listing.tokensAvailable)} tokens available</span>
+                      <span>{formatNumber(listing.tokensAvailable)} {t('dashboard.tokensAvailable')}</span>
                       <Button variant="outline" size="sm" asChild>
-                        <Link href={`/herd/${listing.herdId}`}>Buy</Link>
+                        <Link href={`/herd/${listing.herdId}`}>{t('dashboard.buy')}</Link>
                       </Button>
                     </div>
                   </div>
@@ -233,21 +239,21 @@ export default function DashboardPage() {
 
           <Card>
             <CardHeader>
-              <CardTitle>Latest Cow Sales</CardTitle>
+              <CardTitle>{t('dashboard.latestCowSales')}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               {latestSales.map((sale) => (
                 <div key={sale.id} className="rounded-2xl border border-border p-4">
                   <div className="flex items-center justify-between gap-4">
                     <div>
-                      <p className="font-semibold">{sale.herdName}</p>
+                      <p className="font-semibold">{t(`herds.${sale.herdId}.name`, sale.herdName)}</p>
                       <p className="text-sm text-muted-foreground">
-                        {sale.cowTag} sold and routed to token holders
+                        {t('dashboard.soldAndRouted', { tag: sale.cowTag })}
                       </p>
                     </div>
                     <div className="text-right">
                       <p className="font-semibold">{formatCurrency(sale.salePriceUsd)}</p>
-                      <p className="text-xs text-muted-foreground">{sale.settlementCurrency} payout</p>
+                      <p className="text-xs text-muted-foreground">{t('dashboard.payout', { currency: sale.settlementCurrency })}</p>
                     </div>
                   </div>
                 </div>
@@ -263,27 +269,27 @@ export default function DashboardPage() {
             <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
               <Coins className="h-6 w-6 text-primary" />
             </div>
-            <h3 className="mb-2 font-semibold">NAV Minting</h3>
+            <h3 className="mb-2 font-semibold">{t('features.navMinting')}</h3>
             <p className="text-sm text-muted-foreground">
-              Platform inventory is minted against herd NAV so each SPL share maps to a fractional claim on the pool.
+              {t('features.navMintingDesc')}
             </p>
           </div>
           <div className="text-center">
             <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
               <TrendingUp className="h-6 w-6 text-primary" />
             </div>
-            <h3 className="mb-2 font-semibold">Dividend Streaming</h3>
+            <h3 className="mb-2 font-semibold">{t('features.dividendStreaming')}</h3>
             <p className="text-sm text-muted-foreground">
-              Sold cows distribute proceeds pro-rata to holders and only nudge NAV down slightly to reflect lower herd inventory.
+              {t('features.dividendStreamingDesc')}
             </p>
           </div>
           <div className="text-center">
             <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
               <Wallet className="h-6 w-6 text-primary" />
             </div>
-            <h3 className="mb-2 font-semibold">P2P Matching</h3>
+            <h3 className="mb-2 font-semibold">{t('features.p2pMatching')}</h3>
             <p className="text-sm text-muted-foreground">
-              Buyers settle in SOL while the listing engine transfers herd tokens in the same workflow.
+              {t('features.p2pMatchingDesc')}
             </p>
           </div>
         </div>

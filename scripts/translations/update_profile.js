@@ -1,4 +1,6 @@
-'use client'
+const fs = require('fs');
+
+const code = `'use client'
 
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
@@ -32,21 +34,14 @@ export default function ProfilePage() {
   const [isUnlinking, setIsUnlinking] = useState(false)
   const [phantomSolBalance, setPhantomSolBalance] = useState<number | null>(null)
   const [isSolBalanceLoading, setIsSolBalanceLoading] = useState(false)
-<<<<<<< Updated upstream
-  const [solBalanceStatus, setSolBalanceStatus] = useState<string>('Live balance')
-  const [isTokenBalanceLoading, setIsTokenBalanceLoading] = useState(false)
-  const [tokenBalanceStatus, setTokenBalanceStatus] = useState<string>('Live CowChain token balance')
-=======
   const [solBalanceStatus, setSolBalanceStatus] = useState<string>(t('profile.liveBalance'))
->>>>>>> Stashed changes
   const [kindFilter, setKindFilter] = useState<'all' | 'nav-buy' | 'market-buy' | 'listing' | 'claim' | 'cow-sale'>('all')
   const [currencyFilter, setCurrencyFilter] = useState<'all' | 'SOL' | 'USDC'>('all')
   const {
-    state: { wallet, positions, transactions, platform },
+    state: { wallet, positions, transactions },
     portfolioSummary,
     claimDividends,
     disconnectWallet,
-    setPlatformTokenBalance,
   } = useDemoState()
   const { data: session, update: updateSession } = useSession()
   const { requireAuth } = useAuthGuard()
@@ -55,7 +50,6 @@ export default function ProfilePage() {
   const email = session?.user?.email || t('profile.noEmail')
   const connectedWalletAddress = wallet.connected ? wallet.walletAddress : ''
   const displayedSolBalance = phantomSolBalance
-  const displayedCowChainBalance = wallet.platformTokenBalance
 
   const fetchSolBalance = async () => {
     if (!wallet.connected || !connectedWalletAddress) {
@@ -81,7 +75,7 @@ export default function ProfilePage() {
 
       const requestBalance = async (cluster: Cluster | 'auto') => {
         const params = new URLSearchParams({ address: connectedWalletAddress, cluster })
-        return fetch(`/api/wallet/balance?${params.toString()}`, { cache: 'no-store' })
+        return fetch(\`/api/wallet/balance?\${params.toString()}\`, { cache: 'no-store' })
       }
 
       const parseBalanceResponse = async (response: Response) => {
@@ -113,7 +107,7 @@ export default function ProfilePage() {
       }
 
       setPhantomSolBalance(finalData.sol)
-      setSolBalanceStatus(`${t('profile.liveBalance')} (${finalData.cluster})`)
+      setSolBalanceStatus(\`\${t('profile.liveBalance')} (\${finalData.cluster})\`)
     } catch {
       setPhantomSolBalance(null)
       setSolBalanceStatus(t('profile.failedToRefresh'))
@@ -136,92 +130,14 @@ export default function ProfilePage() {
     loadProfile()
   }, [])
 
-  const fetchPlatformTokenBalance = async () => {
-    if (!wallet.connected || !connectedWalletAddress) {
-      setPlatformTokenBalance(null)
-      setTokenBalanceStatus('Connect wallet to load CowChain balance')
-      return
-    }
-
-    if (!platform.mint?.trim()) {
-      setPlatformTokenBalance(null)
-      setTokenBalanceStatus('CowChain mint is not configured yet')
-      return
-    }
-
-    setIsTokenBalanceLoading(true)
-    setTokenBalanceStatus('Refreshing CowChain balance...')
-
-    try {
-      let preferredCluster: Cluster | 'auto' = 'auto'
-      try {
-        const provider = (window as Window & { solana?: PhantomRequestProvider }).solana
-        const providerCluster = await provider?.request?.({ method: 'getCluster' })
-        if (isCluster(providerCluster)) {
-          preferredCluster = providerCluster
-        }
-      } catch {
-        // Fallback to auto if provider cluster is unavailable.
-      }
-
-      const requestBalance = async (cluster: Cluster | 'auto') => {
-        const params = new URLSearchParams({
-          address: connectedWalletAddress,
-          mint: platform.mint,
-          symbol: platform.symbol,
-          cluster,
-        })
-        return fetch(`/api/wallet/token-balance?${params.toString()}`, { cache: 'no-store' })
-      }
-
-      const parseBalanceResponse = async (response: Response) => {
-        return (await response.json()) as
-          | {
-              ok: true
-              amount: number
-              cluster: string
-              mint: string
-            }
-          | {
-              ok: false
-              error?: string
-            }
-      }
-
-      let response = await requestBalance(preferredCluster)
-      let finalData = await parseBalanceResponse(response)
-
-      if ((!response.ok || !finalData.ok) && preferredCluster !== 'auto') {
-        response = await requestBalance('auto')
-        finalData = await parseBalanceResponse(response)
-      }
-
-      if (!response.ok || !finalData.ok) {
-        setPlatformTokenBalance(null)
-        setTokenBalanceStatus(finalData.ok ? 'Failed to refresh CowChain balance' : finalData.error || 'Failed to refresh CowChain balance')
-        return
-      }
-
-      setPlatformTokenBalance(finalData.amount)
-      setTokenBalanceStatus(`Live ${platform.symbol} balance (${finalData.cluster})`)
-    } catch {
-      setPlatformTokenBalance(null)
-      setTokenBalanceStatus('Failed to refresh CowChain balance')
-    } finally {
-      setIsTokenBalanceLoading(false)
-    }
-  }
-
   useEffect(() => {
     if (!wallet.connected || !connectedWalletAddress) {
       setPhantomSolBalance(null)
-      setPlatformTokenBalance(null)
       return
     }
 
-    void fetchSolBalance()
-    void fetchPlatformTokenBalance()
-  }, [wallet.connected, connectedWalletAddress, platform.mint])
+    fetchSolBalance()
+  }, [wallet.connected, connectedWalletAddress])
 
   const copyAddress = async () => {
     if (!connectedWalletAddress) {
@@ -286,7 +202,7 @@ export default function ProfilePage() {
                   )}
                 >
                   <Award className="h-3 w-3" />
-                  {wallet.connected ? `${wallet.provider} ${t('profile.connected')}` : t('profile.disconnected')}
+                  {wallet.connected ? \`\${wallet.provider} \${t('profile.connected')}\` : t('profile.disconnected')}
                 </div>
                 {session?.user?.role === 'farmer' && (
                   <div className="inline-flex items-center gap-1.5 rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-sm font-medium text-primary">
@@ -313,11 +229,7 @@ export default function ProfilePage() {
                 </span>
                 <span className="flex items-center gap-1">
                   <Coins className="h-4 w-4" />
-<<<<<<< Updated upstream
-                  {formatNumber(portfolioSummary.userPlatformTokens)} {platform.symbol} owned
-=======
                   {formatNumber(portfolioSummary.userPlatformTokens)} {t('profile.tokensOwned')}
->>>>>>> Stashed changes
                 </span>
               </div>
             </div>
@@ -348,14 +260,14 @@ export default function ProfilePage() {
         </CardContent>
       </Card>
 
-      <div className="mb-8 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="mb-8 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
         <Card>
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div className="space-y-2">
                 <p className="text-sm text-muted-foreground">{t('profile.solBalanceTitle')}</p>
                 <p className="text-2xl font-bold">
-                  {displayedSolBalance !== null ? `${displayedSolBalance.toFixed(4)} SOL` : t('profile.unavailable')}
+                  {displayedSolBalance !== null ? \`\${displayedSolBalance.toFixed(4)} SOL\` : t('profile.unavailable')}
                 </p>
                 <Button
                   size="sm"
@@ -374,34 +286,6 @@ export default function ProfilePage() {
             </div>
           </CardContent>
         </Card>
-
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-start justify-between gap-4">
-              <div className="space-y-2">
-                <p className="text-sm text-muted-foreground">{platform.symbol} Balance</p>
-                <p className="text-2xl font-bold">
-                  {displayedCowChainBalance !== null ? `${formatNumber(displayedCowChainBalance)} ${platform.symbol}` : 'Unavailable'}
-                </p>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={fetchPlatformTokenBalance}
-                  disabled={!wallet.connected || isTokenBalanceLoading}
-                >
-                  <RefreshCw className="mr-2 h-4 w-4" />
-                  {isTokenBalanceLoading ? 'Refreshing...' : 'Refresh'}
-                </Button>
-                <p className="text-xs text-muted-foreground">{tokenBalanceStatus}</p>
-                <p className="text-xs text-muted-foreground">Mint: {platform.mint ? shortenWallet(platform.mint) : 'not set'}</p>
-              </div>
-              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-primary/10">
-                <Coins className="h-6 w-6 text-primary" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
         <StatCard
           title={t('profile.totalDivsEarned')}
           value={formatCurrency(portfolioSummary.totalDividendsEarnedUsd)}
@@ -494,3 +378,7 @@ export default function ProfilePage() {
     </div>
   )
 }
+`;
+
+fs.writeFileSync(require('path').join(__dirname, '../../app/profile/page.tsx'), code, 'utf8');
+console.log('Profile page updated!');

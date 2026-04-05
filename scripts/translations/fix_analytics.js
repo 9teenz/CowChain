@@ -1,6 +1,6 @@
-'use client'
+const fs = require('fs');
 
-import { Users, DollarSign, TrendingUp, Wallet, Coins, GitBranch } from 'lucide-react'
+const content = `import { Users, DollarSign, TrendingUp, Wallet, Coins, GitBranch } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { StatCard } from '@/components/stat-card'
 import { formatNumber, formatCurrency } from '@/lib/utils'
@@ -24,13 +24,13 @@ export default function AnalyticsPage() {
   const { t } = useTranslation()
 
   const navVsMarketData = herds.map((herd) => ({
-    herd: herd.name.split(' ')[0],
+    herd: t(\`herds.\${herd.id}.name\`, herd.name.split(' ')[0]),
     nav: platform.navPerTokenUsd,
     market: herd.marketPriceUsd,
   }))
 
   const dividendData = herds.map((herd) => ({
-    herd: herd.name.split(' ')[0],
+    herd: t(\`herds.\${herd.id}.name\`, herd.name.split(' ')[0]),
     distributed: herd.totalDividendsDistributedUsd,
   }))
 
@@ -64,7 +64,7 @@ export default function AnalyticsPage() {
         />
         <StatCard
           title={t("analytics.avgYield")}
-          value={`${averageYield.toFixed(1)}%`}
+          value={\`\${averageYield.toFixed(1)}%\`}
           change={t("analytics.acrossAllTokenPools")}
           changeType="neutral"
           icon={TrendingUp}
@@ -205,3 +205,7 @@ export default function AnalyticsPage() {
     </div>
   )
 }
+`;
+
+fs.writeFileSync(require('path').join(__dirname, '../../app/analytics/page.tsx'), "'use client'\n\n" + content, 'utf8');
+console.log('Analytics fixed.');

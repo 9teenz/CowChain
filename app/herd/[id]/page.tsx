@@ -12,6 +12,7 @@ import { useAuthGuard } from '@/hooks/use-auth-guard'
 import { listingPremiumPct, shortenWallet } from '@/lib/solana-contract'
 import { PLATFORM_TOKEN_SYMBOL } from '@/lib/demo-data'
 import { formatCurrency, formatNumber } from '@/lib/utils'
+import { useTranslation } from 'react-i18next'
 
 export default function HerdDetailsPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params)
@@ -47,10 +48,10 @@ export default function HerdDetailsPage({ params }: { params: Promise<{ id: stri
     return (
       <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
         <div className="text-center">
-          <h1 className="text-2xl font-bold">Herd not found</h1>
-          <p className="mt-2 text-muted-foreground">The herd you&apos;re looking for doesn&apos;t exist.</p>
+          <h1 className="text-2xl font-bold">{t('herdDetails.notFound')}</h1>
+          <p className="mt-2 text-muted-foreground">{t('herdDetails.notFoundDesc')}</p>
           <Button asChild className="mt-4">
-            <Link href="/">Back to dashboard</Link>
+            <Link href="/">{t('herdDetails.backDashboard')}</Link>
           </Button>
         </div>
       </div>
@@ -78,7 +79,7 @@ export default function HerdDetailsPage({ params }: { params: Promise<{ id: stri
         className="mb-6 inline-flex items-center gap-2 text-sm text-muted-foreground transition-colors hover:text-foreground"
       >
         <ArrowLeft className="h-4 w-4" />
-        Back to dashboard
+        {t('herdDetails.backDashboard')}
       </Link>
 
       <div className="mb-8 flex flex-col gap-6 rounded-3xl border border-border bg-card/70 p-6 lg:flex-row lg:items-start lg:justify-between">
@@ -95,7 +96,7 @@ export default function HerdDetailsPage({ params }: { params: Promise<{ id: stri
             </span>
             <span className="inline-flex items-center gap-1.5">
               <Wallet className="h-4 w-4" />
-              Herd size {herd.herdSize}
+              {t('herdDetails.herdSize')} {herd.herdSize}
             </span>
             <span className="inline-flex items-center gap-1.5">
               <Droplets className="h-4 w-4" />
@@ -107,15 +108,15 @@ export default function HerdDetailsPage({ params }: { params: Promise<{ id: stri
 
         <div className="grid min-w-[280px] gap-3 sm:grid-cols-2 lg:w-[360px]">
           <div className="rounded-2xl border border-primary/20 bg-primary/5 p-4">
-            <p className="text-sm text-muted-foreground">CowChain token price</p>
+            <p className="text-sm text-muted-foreground">{t('herdDetails.ccTokenPrice')}</p>
             <p className="mt-2 text-3xl font-bold text-primary">{formatCurrency(platform.navPerTokenUsd)}</p>
           </div>
           <div className="rounded-2xl border border-border p-4">
-            <p className="text-sm text-muted-foreground">Market price</p>
+            <p className="text-sm text-muted-foreground">{t('herdDetails.marketPrice')}</p>
             <p className="mt-2 text-3xl font-bold">{formatCurrency(herd.marketPriceUsd)}</p>
             <p className="mt-2 text-sm text-muted-foreground">
               {listingPremiumPct(herd.marketPriceUsd, platform.navPerTokenUsd) > 0 ? '+' : ''}
-              {listingPremiumPct(herd.marketPriceUsd, platform.navPerTokenUsd)}% vs CowChain
+              {listingPremiumPct(herd.marketPriceUsd, platform.navPerTokenUsd)}% {t('herdDetails.vsCowChain')}
             </p>
           </div>
         </div>
@@ -130,25 +131,25 @@ export default function HerdDetailsPage({ params }: { params: Promise<{ id: stri
       <div className="mb-8 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <Card>
           <CardContent className="p-5">
-            <p className="text-sm text-muted-foreground">Total herd size</p>
+            <p className="text-sm text-muted-foreground">{t('herdDetails.totalHerdSize')}</p>
             <p className="mt-2 text-2xl font-bold">{herd.herdSize}</p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-5">
-            <p className="text-sm text-muted-foreground">Platform token supply</p>
+            <p className="text-sm text-muted-foreground">{t('herdDetails.platformTokenSupply')}</p>
             <p className="mt-2 text-2xl font-bold">{formatNumber(platform.totalSupply)}</p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-5">
-            <p className="text-sm text-muted-foreground">Available at CowChain price</p>
+            <p className="text-sm text-muted-foreground">{t('herdDetails.availableTokens')}</p>
             <p className="mt-2 text-2xl font-bold">{formatNumber(platform.availableTokens)}</p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-5">
-            <p className="text-sm text-muted-foreground">Your balance</p>
+            <p className="text-sm text-muted-foreground">{t('herdDetails.yourBalance')}</p>
             <p className="mt-2 text-2xl font-bold">{formatNumber(position?.tokensOwned ?? 0)}</p>
           </CardContent>
         </Card>
@@ -158,24 +159,24 @@ export default function HerdDetailsPage({ params }: { params: Promise<{ id: stri
         <div className="space-y-6">
           <Card>
             <CardHeader>
-              <CardTitle>Herd Fundamentals</CardTitle>
+              <CardTitle>{t('herdDetails.herdFundamentals')}</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
                 <div className="rounded-2xl border border-border p-4">
-                  <p className="text-sm text-muted-foreground">Herd age</p>
-                  <p className="mt-2 text-2xl font-bold">{herd.herdAgeMonths} mo</p>
+                  <p className="text-sm text-muted-foreground">{t('herdDetails.herdAge')}</p>
+                  <p className="mt-2 text-2xl font-bold">{herd.herdAgeMonths} {t('herdDetails.mo')}</p>
                 </div>
                 <div className="rounded-2xl border border-border p-4">
-                  <p className="text-sm text-muted-foreground">Milk production</p>
+                  <p className="text-sm text-muted-foreground">{t('herdDetails.milkProduction')}</p>
                   <p className="mt-2 text-2xl font-bold">{formatNumber(herd.milkProductionLitersPerDay)}L</p>
                 </div>
                 <div className="rounded-2xl border border-border p-4">
-                  <p className="text-sm text-muted-foreground">Expected revenue</p>
+                  <p className="text-sm text-muted-foreground">{t('herdDetails.expectedRevenue')}</p>
                   <p className="mt-2 text-2xl font-bold">{formatCurrency(herd.expectedAnnualRevenueUsd)}</p>
                 </div>
                 <div className="rounded-2xl border border-border p-4">
-                  <p className="text-sm text-muted-foreground">Dividends paid</p>
+                  <p className="text-sm text-muted-foreground">{t('herdDetails.dividendsPaid')}</p>
                   <p className="mt-2 text-2xl font-bold">{formatCurrency(herd.totalDividendsDistributedUsd)}</p>
                 </div>
               </div>
@@ -185,7 +186,7 @@ export default function HerdDetailsPage({ params }: { params: Promise<{ id: stri
           <div className="grid gap-6 xl:grid-cols-2">
             <Card>
               <CardHeader>
-                <CardTitle>CowChain Price Trend</CardTitle>
+                <CardTitle>{t('herdDetails.priceTrend')}</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="h-64">
@@ -218,7 +219,7 @@ export default function HerdDetailsPage({ params }: { params: Promise<{ id: stri
 
             <Card>
               <CardHeader>
-                <CardTitle>Dividend Events</CardTitle>
+                <CardTitle>{t('herdDetails.dividendEvents')}</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="h-64">
@@ -246,18 +247,18 @@ export default function HerdDetailsPage({ params }: { params: Promise<{ id: stri
 
           <Card>
             <CardHeader>
-              <CardTitle>Sold Cows and Dividend History</CardTitle>
+              <CardTitle>{t('herdDetails.soldCows')}</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="overflow-x-auto">
                 <table className="w-full min-w-[720px] text-sm">
                   <thead>
                     <tr className="border-b border-border text-left text-muted-foreground">
-                      <th className="pb-3 font-medium">Cow</th>
-                      <th className="pb-3 font-medium">Sale price</th>
-                      <th className="pb-3 font-medium">Dividend / token</th>
-                      <th className="pb-3 font-medium">CowChain price move</th>
-                      <th className="pb-3 font-medium">Settlement</th>
+                      <th className="pb-3 font-medium">{t('herdDetails.cow')}</th>
+                      <th className="pb-3 font-medium">{t('herdDetails.salePrice')}</th>
+                      <th className="pb-3 font-medium">{t('herdDetails.dividendToken')}</th>
+                      <th className="pb-3 font-medium">{t('herdDetails.priceMove')}</th>
+                      <th className="pb-3 font-medium">{t('herdDetails.settlement')}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -267,7 +268,7 @@ export default function HerdDetailsPage({ params }: { params: Promise<{ id: stri
                         <td className="py-4">{formatCurrency(sale.salePriceUsd)}</td>
                         <td className="py-4">{formatCurrency(sale.dividendPerTokenUsd)}</td>
                         <td className="py-4">
-                          {formatCurrency(sale.navBeforeUsd)} to {formatCurrency(sale.navAfterUsd)}
+                          {formatCurrency(sale.navBeforeUsd)} {t('herdDetails.to')} {formatCurrency(sale.navAfterUsd)}
                         </td>
                         <td className="py-4">{sale.settlementCurrency}</td>
                       </tr>
@@ -282,15 +283,15 @@ export default function HerdDetailsPage({ params }: { params: Promise<{ id: stri
         <div className="space-y-6">
           <Card>
             <CardHeader>
-              <CardTitle>Buy From Platform</CardTitle>
+              <CardTitle>{t('herdDetails.buyPlatform')}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div>
-                <label className="mb-2 block text-sm font-medium">Token amount</label>
+                <label className="mb-2 block text-sm font-medium">{t('herdDetails.tokenAmount')}</label>
                 <Input value={tokenAmount} onChange={(event) => setTokenAmount(event.target.value)} />
               </div>
               <div>
-                <label className="mb-2 block text-sm font-medium">Settlement currency</label>
+                <label className="mb-2 block text-sm font-medium">{t('herdDetails.settlementCurrency')}</label>
                 <select
                   value={purchaseCurrency}
                   onChange={(event) => setPurchaseCurrency(event.target.value as 'SOL' | 'USDC')}
@@ -301,9 +302,9 @@ export default function HerdDetailsPage({ params }: { params: Promise<{ id: stri
                 </select>
               </div>
               <div className="rounded-2xl border border-primary/20 bg-primary/5 p-4">
-                <p className="text-sm text-muted-foreground">Estimated annual dividend stream</p>
+                <p className="text-sm text-muted-foreground">{t('herdDetails.estDividend')}</p>
                 <p className="mt-2 text-3xl font-bold text-primary">{formatCurrency(estimatedEarnings)}</p>
-                <p className="mt-2 text-sm text-muted-foreground">Cost at CowChain price: {formatCurrency((Number(tokenAmount) || 0) * platform.navPerTokenUsd)}</p>
+                <p className="mt-2 text-sm text-muted-foreground">{t('herdDetails.costAtPrice')} {formatCurrency((Number(tokenAmount) || 0) * platform.navPerTokenUsd)}</p>
               </div>
               <Button className="w-full" onClick={handleNavBuy}>
                 Buy CowChain Token
@@ -313,19 +314,19 @@ export default function HerdDetailsPage({ params }: { params: Promise<{ id: stri
 
           <Card>
             <CardHeader>
-              <CardTitle>Marketplace Order Book</CardTitle>
+              <CardTitle>{t('herdDetails.marketOrderBook')}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
               {herdListings.map((listing) => (
                 <div key={listing.id} className="rounded-2xl border border-border p-4">
                   <div className="flex items-start justify-between gap-3">
                     <div>
-                      <p className="font-semibold">{formatNumber(listing.tokensAvailable)} tokens</p>
-                      <p className="text-sm text-muted-foreground">Seller {shortenWallet(listing.sellerWallet)}</p>
+                      <p className="font-semibold">{formatNumber(listing.tokensAvailable)} {t('herdDetails.tokens')}</p>
+                      <p className="text-sm text-muted-foreground">{t('herdDetails.seller')} {shortenWallet(listing.sellerWallet)}</p>
                     </div>
                     <div className="text-right">
                       <p className="font-semibold">{formatCurrency(listing.pricePerTokenUsd)}</p>
-                      <p className="text-sm text-muted-foreground">per token</p>
+                      <p className="text-sm text-muted-foreground">{t('herdDetails.perToken')}</p>
                     </div>
                   </div>
                   <Button
@@ -342,15 +343,15 @@ export default function HerdDetailsPage({ params }: { params: Promise<{ id: stri
 
           <Card>
             <CardHeader>
-              <CardTitle>Simulate Cow Sale</CardTitle>
+              <CardTitle>{t('herdDetails.simulateSale')}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div>
-                <label className="mb-2 block text-sm font-medium">Cow sale price</label>
+                <label className="mb-2 block text-sm font-medium">{t('herdDetails.cowSalePrice')}</label>
                 <Input value={salePrice} onChange={(event) => setSalePrice(event.target.value)} />
               </div>
               <div className="rounded-2xl border border-border p-4 text-sm text-muted-foreground">
-                Variant 2 payout: sale revenue is distributed proportionally to token holders, while NAV decreases only slightly.
+                {t('herdDetails.variantPayout')}
               </div>
               <Button className="w-full" variant="outline" onClick={handleSaleSimulation}>
                 Distribute dividends on-chain

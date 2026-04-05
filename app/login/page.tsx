@@ -1,16 +1,18 @@
-'use client'
+﻿'use client'
 
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import { signIn } from 'next-auth/react'
 import { CowIcon } from '@/components/icons/cow-icon'
+import { useTranslation } from 'react-i18next'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Mail, Lock, LogIn } from 'lucide-react'
 
 export default function LoginPage() {
+  const { t } = useTranslation()
   const router = useRouter()
   const [nextPath, setNextPath] = useState('/profile')
 
@@ -38,7 +40,7 @@ export default function LoginPage() {
     setIsLoading(false)
 
     if (result?.error) {
-      setError('Invalid credentials or email is not verified yet.')
+      setError(t('auth.invalidCreds'))
       return
     }
 
@@ -148,3 +150,4 @@ export default function LoginPage() {
     </div>
   )
 }
+

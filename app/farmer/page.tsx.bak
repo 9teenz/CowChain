@@ -2,7 +2,6 @@
 
 import { useState } from 'react'
 import { useSession } from 'next-auth/react'
-import { useTranslation } from 'react-i18next'
 import {
   Activity,
   ArrowUpRight,
@@ -77,7 +76,6 @@ const INCOME_MONTHS = ['Oct', 'Nov', 'Dec', 'Jan', 'Feb', 'Mar', 'Apr']
 
 export default function FarmerProfilePage() {
   const { data: session } = useSession()
-  const { t } = useTranslation()
   const {
     state: { herds, positions, sales, transactions, wallet },
     simulateCowSale,
@@ -113,14 +111,6 @@ export default function FarmerProfilePage() {
     })
     return row
   })
-
-  // Provide translated month texts based on generic formatting or dictionary
-  const getTranslatedMonth = (monthCode: string) => {
-    // Basic dynamic translation for months if needed, 
-    // or just leave them as is if user relies on default dates.
-    // For simplicity, we just use the original array.
-    return monthCode;
-  }
 
   const copyWallet = async () => {
     if (!wallet.walletAddress) return
@@ -186,15 +176,13 @@ export default function FarmerProfilePage() {
                 <h1 className="text-2xl font-bold">{fullName}</h1>
                 <Badge variant="default" className="gap-1">
                   <Award className="h-3 w-3" />
-                  {t('farmer.farmerRole')}
+                  Farmer
                 </Badge>
-                <Badge variant="secondary">
-                  {herds.length} {herds.length === 1 ? t('farmer.farmSingular') : t('farmer.farmsPlural')}
-                </Badge>
+                <Badge variant="secondary">{herds.length} {herds.length === 1 ? 'farm' : 'farms'}</Badge>
               </div>
               <p className="flex items-center gap-1.5 text-sm text-muted-foreground">
                 <Users className="h-3.5 w-3.5" />
-                {formatNumber(investorCount)} {t('farmer.investorsPlural')}
+                {formatNumber(investorCount)} investors
               </p>
 
               <div className="flex flex-wrap gap-3 text-sm">
@@ -221,11 +209,11 @@ export default function FarmerProfilePage() {
                 </span>
                 <span className="flex items-center gap-1">
                   <Users className="h-4 w-4" />
-                  {formatNumber(investorCount)} {t('farmer.investorsPlural')}
+                  {formatNumber(investorCount)} investors
                 </span>
                 <span className="flex items-center gap-1">
                   <Activity className="h-4 w-4" />
-                  {transactions.length} {t('farmer.transactionsPlural')}
+                  {transactions.length} transactions
                 </span>
               </div>
             </div>
@@ -233,7 +221,7 @@ export default function FarmerProfilePage() {
             <div className="flex flex-wrap gap-2">
               <Button className="gap-2">
                 <Plus className="h-4 w-4" />
-                {t('farmer.createFarm')}
+                Create Farm
               </Button>
             </div>
           </div>
@@ -243,23 +231,23 @@ export default function FarmerProfilePage() {
       {/* KPI Row */}
       <div className="mb-8 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
         <StatCard
-          title={t('farmer.totalCows')}
+          title="Total Cows"
           value={formatNumber(totalCows)}
-          change={`${herds.length} ${herds.length === 1 ? t('farmer.farmSingular') : t('farmer.farmsPlural')}`}
+          change={`${herds.length} ${herds.length === 1 ? 'farm' : 'farms'}`}
           changeType="positive"
           icon={Beef}
         />
         <StatCard
-          title={t('farmer.totalCowchainValue')}
+          title="Total CowChain Value"
           value={formatCurrency(totalNAV)}
-          change={t('farmer.valueOfAllAssets')}
+          change="Value of all assets"
           changeType="positive"
           icon={BarChart3}
         />
         <StatCard
-          title={t('farmer.milkRevenueMo')}
+          title="Milk Revenue / mo"
           value={formatCurrency(totalMonthlyMilk)}
-          change={t('farmer.currentMonthForecast')}
+          change="Current month forecast"
           changeType="positive"
           icon={Milk}
         />
@@ -269,14 +257,15 @@ export default function FarmerProfilePage() {
       <Tabs defaultValue="farms">
         <TabsList className="mb-6 w-full justify-start overflow-x-auto sm:w-auto">
           <TabsTrigger value="farms" className="gap-1.5">
-            <Beef className="h-4 w-4" /> {t('farmer.tabFarms')}
+            <Beef className="h-4 w-4" /> Farms
           </TabsTrigger>
           <TabsTrigger value="finance" className="gap-1.5">
-            <DollarSign className="h-4 w-4" /> {t('farmer.tabFinance')}
+            <DollarSign className="h-4 w-4" /> Finance
           </TabsTrigger>
           <TabsTrigger value="activity" className="gap-1.5">
-            <Activity className="h-4 w-4" /> {t('farmer.tabActivity')}
+            <Activity className="h-4 w-4" /> Activity
           </TabsTrigger>
+
         </TabsList>
 
         {/* FARMS */}
@@ -285,28 +274,28 @@ export default function FarmerProfilePage() {
             {herds.map((herd) => (
               <Card key={herd.id} className="flex flex-col overflow-hidden transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md">
                 <CardHeader className="pb-3">
-                  <CardTitle className="text-base">{t(`herds.${herd.id}.name`, herd.name)}</CardTitle>
-                  <CardDescription className="text-xs">{t(`herds.${herd.id}.location`, herd.location)}</CardDescription>
+                  <CardTitle className="text-base">{herd.name}</CardTitle>
+                  <CardDescription className="text-xs">{herd.location}</CardDescription>
                 </CardHeader>
                 <CardContent className="flex flex-1 flex-col gap-4">
                   <div className="grid grid-cols-3 gap-3">
                     <div className="rounded-lg bg-muted/50 p-3">
-                      <p className="text-xs text-muted-foreground">{t('farmer.cowsLabel')}</p>
+                      <p className="text-xs text-muted-foreground">Cows</p>
                       <p className="text-lg font-bold">{formatNumber(herd.herdSize)}</p>
                     </div>
                     <div className="rounded-lg bg-muted/50 p-3">
-                      <p className="text-xs text-muted-foreground">{t('farmer.cowchainLabel')}</p>
+                      <p className="text-xs text-muted-foreground">CowChain</p>
                       <p className="text-lg font-bold">{formatCurrency(herd.totalValueUsd)}</p>
                     </div>
                     <div className="rounded-lg bg-muted/50 p-3">
-                      <p className="text-xs text-muted-foreground">{t('farmer.milkYearLabel')}</p>
+                      <p className="text-xs text-muted-foreground">Milk / year</p>
                       <p className="text-lg font-bold">{formatCurrency(herd.expectedAnnualRevenueUsd)}</p>
                     </div>
                   </div>
 
                   <div className="space-y-1">
                     <div className="flex justify-between text-xs text-muted-foreground">
-                      <span>{t('farmer.tokensSoldLabel')}</span>
+                      <span>Tokens sold</span>
                       <span>{formatNumber(herd.totalTokens - herd.availableDirectTokens)} / {formatNumber(herd.totalTokens)}</span>
                     </div>
                     <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
@@ -316,19 +305,19 @@ export default function FarmerProfilePage() {
                       />
                     </div>
                     <p className="text-right text-xs text-muted-foreground">
-                      {(((herd.totalTokens - herd.availableDirectTokens) / herd.totalTokens) * 100).toFixed(1)}% {t('farmer.soldLabel')}
+                      {(((herd.totalTokens - herd.availableDirectTokens) / herd.totalTokens) * 100).toFixed(1)}% sold
                     </p>
                   </div>
 
                   <div className="mt-auto grid grid-cols-2 gap-2">
                     <Button variant="outline" size="sm" className="gap-1 text-xs" onClick={() => openModal('add-cows', herd.id)}>
-                      <Plus className="h-3 w-3" /> {t('farmer.addCowsBtn')}
+                      <Plus className="h-3 w-3" /> Add Cows
                     </Button>
                     <Button variant="outline" size="sm" className="gap-1 text-xs" onClick={() => openModal('sell-cow', herd.id)}>
-                      <ArrowUpRight className="h-3 w-3" /> {t('farmer.sellCowBtn')}
+                      <ArrowUpRight className="h-3 w-3" /> Sell Cow
                     </Button>
                     <Button variant="outline" size="sm" className="gap-1 text-xs col-span-2" onClick={() => openModal('update-revenue', herd.id)}>
-                      <RefreshCw className="h-3 w-3" /> {t('farmer.updateRevenueBtn')}
+                      <RefreshCw className="h-3 w-3" /> Update Revenue
                     </Button>
                   </div>
                 </CardContent>
@@ -341,31 +330,31 @@ export default function FarmerProfilePage() {
         <TabsContent value="finance">
           <div className="space-y-6">
             <div className="grid gap-4 sm:grid-cols-2">
-              <StatCard title={t('farmer.annualMilkRevenue')} value={formatCurrency(totalAnnualMilk)} change={t('farmer.allFarmsForecast')} changeType="positive" icon={Milk} />
-              <StatCard title={t('farmer.milkRevenueMo')} value={formatCurrency(totalMonthlyMilk)} change={t('farmer.currentMonthForecast')} changeType="positive" icon={TrendingUp} />
+              <StatCard title="Annual Milk Revenue" value={formatCurrency(totalAnnualMilk)} change="All farms — forecast" changeType="positive" icon={Milk} />
+              <StatCard title="Revenue / month" value={formatCurrency(totalMonthlyMilk)} change="Current month forecast" changeType="positive" icon={TrendingUp} />
             </div>
 
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-base">
                   <BarChart3 className="h-4 w-4 text-primary" />
-                  {t('farmer.milkRevenueByMonth')}
+                  Milk Revenue by Month
                 </CardTitle>
-                <CardDescription>{t('farmer.breakdownByFarm')}</CardDescription>
+                <CardDescription>Breakdown by farm · last 7 months</CardDescription>
               </CardHeader>
               <CardContent>
                 <ResponsiveContainer width="100%" height={280}>
                   <AreaChart data={incomeChartData} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
-                    <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
-                    <XAxis dataKey="month" tick={{ fontSize: 12, fill: 'var(--color-muted-foreground)' }} axisLine={false} tickLine={false} />
-                    <YAxis tick={{ fontSize: 12, fill: 'var(--color-muted-foreground)' }} axisLine={false} tickLine={false} tickFormatter={(v: number) => `$${(v / 1000).toFixed(0)}k`} />
+                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                    <XAxis dataKey="month" tick={{ fontSize: 12, fill: 'hsl(var(--muted-foreground))' }} axisLine={false} tickLine={false} />
+                    <YAxis tick={{ fontSize: 12, fill: 'hsl(var(--muted-foreground))' }} axisLine={false} tickLine={false} tickFormatter={(v: number) => `$${(v / 1000).toFixed(0)}k`} />
                     <Tooltip
-                      contentStyle={{ background: 'var(--color-card)', border: '1px solid var(--color-border)', borderRadius: 8, fontSize: 12 }}
+                      contentStyle={{ background: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: 8, fontSize: 12 }}
                       formatter={(v: number) => [`$${v.toLocaleString()}`, '']}
                     />
                     <Legend wrapperStyle={{ fontSize: 12 }} />
                     {herds.map((herd, i) => {
-                      const colors = ['var(--color-primary)', '#22d3ee', '#34d399', '#f59e0b']
+                      const colors = ['hsl(var(--primary))', '#22d3ee', '#34d399', '#f59e0b']
                       return (
                         <Area
                           key={herd.id}
@@ -385,31 +374,31 @@ export default function FarmerProfilePage() {
             </Card>
 
             <Card>
-              <CardHeader><CardTitle className="text-base">{t('farmer.farmFinancials')}</CardTitle></CardHeader>
+              <CardHeader><CardTitle className="text-base">Farm Financials</CardTitle></CardHeader>
               <CardContent>
                 <div className="overflow-x-auto">
-                  <table className="w-full min-w-[640px] text-sm whitespace-nowrap">
+                  <table className="w-full min-w-[640px] text-sm">
                     <thead>
                       <tr className="border-b border-border text-left text-muted-foreground">
-                        <th className="pb-3 font-medium pr-4">{t('farmer.tableFarm')}</th>
-                        <th className="pb-3 font-medium pr-4">{t('farmer.tableRevYr')}</th>
-                        <th className="pb-3 font-medium pr-4">{t('farmer.tableCowchain')}</th>
-                        <th className="pb-3 font-medium">{t('farmer.tableRevMo')}</th>
+                        <th className="pb-3 font-medium">Farm</th>
+                        <th className="pb-3 font-medium">Revenue (yr)</th>
+                        <th className="pb-3 font-medium">CowChain</th>
+                        <th className="pb-3 font-medium">Revenue / mo</th>
                       </tr>
                     </thead>
                     <tbody>
                       {herds.map((h) => (
                         <tr key={h.id} className="border-b border-border last:border-0">
-                          <td className="py-4 font-medium pr-4">{t(`herds.${h.id}.name`, h.name)}</td>
-                          <td className="py-4 text-sky-600 dark:text-sky-400 pr-4">{formatCurrency(h.expectedAnnualRevenueUsd)}</td>
-                          <td className="py-4 font-semibold pr-4">{formatCurrency(h.totalValueUsd)}</td>
+                          <td className="py-4 font-medium">{h.name}</td>
+                          <td className="py-4 text-sky-600 dark:text-sky-400">{formatCurrency(h.expectedAnnualRevenueUsd)}</td>
+                          <td className="py-4 font-semibold">{formatCurrency(h.totalValueUsd)}</td>
                           <td className="py-4 text-muted-foreground">{formatCurrency(Math.round(h.expectedAnnualRevenueUsd / 12))}</td>
                         </tr>
                       ))}
                       <tr className="border-t-2 border-border bg-muted/30 font-semibold">
-                        <td className="py-4 pr-4">{t('farmer.tableTotal')}</td>
-                        <td className="py-4 text-sky-600 dark:text-sky-400 pr-4">{formatCurrency(totalAnnualMilk)}</td>
-                        <td className="py-4 pr-4">{formatCurrency(totalNAV)}</td>
+                        <td className="py-4">Total</td>
+                        <td className="py-4 text-sky-600 dark:text-sky-400">{formatCurrency(totalAnnualMilk)}</td>
+                        <td className="py-4">{formatCurrency(totalNAV)}</td>
                         <td className="py-4 text-muted-foreground">{formatCurrency(totalMonthlyMilk)}</td>
                       </tr>
                     </tbody>
@@ -428,28 +417,28 @@ export default function FarmerProfilePage() {
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2 text-base">
                     <Beef className="h-4 w-4 text-primary" />
-                    {t('farmer.cowSaleHistory')}
+                    Cow Sale History
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="overflow-x-auto">
-                    <table className="w-full min-w-[540px] text-sm whitespace-nowrap">
+                    <table className="w-full min-w-[540px] text-sm">
                       <thead>
                         <tr className="border-b border-border text-left text-muted-foreground">
-                          <th className="pb-3 font-medium pr-4">{t('farmer.tableFarm')}</th>
-                          <th className="pb-3 font-medium pr-4">{t('farmer.tableTag')}</th>
-                          <th className="pb-3 font-medium pr-4">{t('farmer.tableSalePrice')}</th>
-                          <th className="pb-3 font-medium pr-4">{t('farmer.tableDivToken')}</th>
-                          <th className="pb-3 font-medium">{t('farmer.tableDate')}</th>
+                          <th className="pb-3 font-medium">Farm</th>
+                          <th className="pb-3 font-medium">Tag</th>
+                          <th className="pb-3 font-medium">Sale Price</th>
+                          <th className="pb-3 font-medium">Dividend / token</th>
+                          <th className="pb-3 font-medium">Date</th>
                         </tr>
                       </thead>
                       <tbody>
                         {sales.map((s) => (
                           <tr key={s.id} className="border-b border-border last:border-0">
-                            <td className="py-3 font-medium pr-4">{t(`herds.${s.herdId}.name`, s.herdName)}</td>
-                            <td className="py-3 font-mono text-xs text-muted-foreground pr-4">{s.cowTag}</td>
-                            <td className="py-3 text-emerald-600 dark:text-emerald-400 pr-4">{formatCurrency(s.salePriceUsd)}</td>
-                            <td className="py-3 pr-4">${s.dividendPerTokenUsd.toFixed(4)}</td>
+                            <td className="py-3 font-medium">{s.herdName}</td>
+                            <td className="py-3 font-mono text-xs text-muted-foreground">{s.cowTag}</td>
+                            <td className="py-3 text-emerald-600 dark:text-emerald-400">{formatCurrency(s.salePriceUsd)}</td>
+                            <td className="py-3">${s.dividendPerTokenUsd.toFixed(4)}</td>
                             <td className="py-3 text-muted-foreground">{new Date(s.saleDate).toLocaleDateString('en-US')}</td>
                           </tr>
                         ))}
@@ -464,15 +453,15 @@ export default function FarmerProfilePage() {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-base">
                   <Activity className="h-4 w-4 text-primary" />
-                  {t('farmer.transactionsFeed')}
+                  Transaction Feed
                 </CardTitle>
-                <CardDescription>{t('farmer.allOnChainEvents')}</CardDescription>
+                <CardDescription>All on-chain events</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="relative space-y-0">
                   <div className="absolute left-5 top-0 bottom-0 w-px bg-border" />
                   {transactions.length === 0 && (
-                    <p className="py-6 text-center text-sm text-muted-foreground">{t('farmer.noTransactionsYet')}</p>
+                    <p className="py-6 text-center text-sm text-muted-foreground">No transactions yet.</p>
                   )}
                   {transactions.map((tx, i) => (
                     <div key={tx.id} className={`relative flex gap-4 ${i !== transactions.length - 1 ? 'pb-6' : ''}`}>
@@ -481,7 +470,7 @@ export default function FarmerProfilePage() {
                       </div>
                       <div className="flex flex-1 flex-wrap items-start justify-between gap-2 pt-1.5">
                         <div>
-                          <p className="text-sm font-medium">{t(`portfolio.txns.${tx.id}`, t(`portfolio.txns.${tx.kind}`, tx.label))}</p>
+                          <p className="text-sm font-medium">{tx.label}</p>
                           <p className="text-xs font-mono text-muted-foreground">{shortenWallet(tx.txId)}</p>
                         </div>
                         <div className="text-right">
@@ -503,22 +492,22 @@ export default function FarmerProfilePage() {
       <Dialog open={modal.kind === 'add-cows'} onOpenChange={(open) => !open && closeModal()}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>{t('farmer.modalAddCows')}</DialogTitle>
-            <DialogDescription>{t(`herds.${modal.herdId}.name`, herds.find((h) => h.id === modal.herdId)?.name || '')}</DialogDescription>
+            <DialogTitle>Add Cows</DialogTitle>
+            <DialogDescription>{herds.find((h) => h.id === modal.herdId)?.name}</DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div className="space-y-1.5">
-              <Label htmlFor="cow-count">{t('farmer.modalNumCows')}</Label>
+              <Label htmlFor="cow-count">Number of cows</Label>
               <Input id="cow-count" type="number" min="1" value={cowCount} onChange={(e) => setCowCount(e.target.value)} />
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="cow-cost">{t('farmer.modalCostPerCow')}</Label>
+              <Label htmlFor="cow-cost">Cost per cow (USD)</Label>
               <Input id="cow-cost" type="number" min="1" value={cowCost} onChange={(e) => setCowCost(e.target.value)} />
             </div>
             {feedback && <p className={`text-sm ${feedback.ok ? 'text-emerald-600 dark:text-emerald-400' : 'text-destructive'}`}>{feedback.msg}</p>}
             <div className="flex justify-end gap-2">
-              <Button variant="outline" onClick={closeModal}>{t('farmer.modalCancel')}</Button>
-              <Button onClick={handleAddCows}>{t('farmer.modalAdd')}</Button>
+              <Button variant="outline" onClick={closeModal}>Cancel</Button>
+              <Button onClick={handleAddCows}>Add</Button>
             </div>
           </div>
         </DialogContent>
@@ -528,18 +517,18 @@ export default function FarmerProfilePage() {
       <Dialog open={modal.kind === 'sell-cow'} onOpenChange={(open) => !open && closeModal()}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>{t('farmer.modalSellCow')}</DialogTitle>
-            <DialogDescription>{t(`herds.${modal.herdId}.name`, herds.find((h) => h.id === modal.herdId)?.name || '')} · {t('farmer.modalSellCowDesc')}</DialogDescription>
+            <DialogTitle>Sell Cow</DialogTitle>
+            <DialogDescription>{herds.find((h) => h.id === modal.herdId)?.name} · CowChain price will be recalculated and dividends distributed to investors</DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div className="space-y-1.5">
-              <Label htmlFor="sale-price">{t('farmer.modalSalePriceUsd')}</Label>
+              <Label htmlFor="sale-price">Sale price (USD)</Label>
               <Input id="sale-price" type="number" min="1" value={salePrice} onChange={(e) => setSalePrice(e.target.value)} />
             </div>
             {feedback && <p className={`text-sm ${feedback.ok ? 'text-emerald-600 dark:text-emerald-400' : 'text-destructive'}`}>{feedback.msg}</p>}
             <div className="flex justify-end gap-2">
-              <Button variant="outline" onClick={closeModal}>{t('farmer.modalCancel')}</Button>
-              <Button variant="destructive" onClick={handleSellCow}>{t('farmer.modalSellBtn')}</Button>
+              <Button variant="outline" onClick={closeModal}>Cancel</Button>
+              <Button variant="destructive" onClick={handleSellCow}>Sell</Button>
             </div>
           </div>
         </DialogContent>
@@ -549,18 +538,18 @@ export default function FarmerProfilePage() {
       <Dialog open={modal.kind === 'update-revenue'} onOpenChange={(open) => !open && closeModal()}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>{t('farmer.modalUpdateMilkRev')}</DialogTitle>
-            <DialogDescription>{t(`herds.${modal.herdId}.name`, herds.find((h) => h.id === modal.herdId)?.name || '')}</DialogDescription>
+            <DialogTitle>Update Milk Revenue</DialogTitle>
+            <DialogDescription>{herds.find((h) => h.id === modal.herdId)?.name}</DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div className="space-y-1.5">
-              <Label htmlFor="milk-revenue">{t('farmer.modalAnnualRevUsd')}</Label>
+              <Label htmlFor="milk-revenue">Annual revenue (USD)</Label>
               <Input id="milk-revenue" type="number" min="1" value={milkRevenue} onChange={(e) => setMilkRevenue(e.target.value)} />
             </div>
             {feedback && <p className={`text-sm ${feedback.ok ? 'text-emerald-600 dark:text-emerald-400' : 'text-destructive'}`}>{feedback.msg}</p>}
             <div className="flex justify-end gap-2">
-              <Button variant="outline" onClick={closeModal}>{t('farmer.modalCancel')}</Button>
-              <Button onClick={handleUpdateRevenue}>{t('farmer.modalUpdateBtn')}</Button>
+              <Button variant="outline" onClick={closeModal}>Cancel</Button>
+              <Button onClick={handleUpdateRevenue}>Update</Button>
             </div>
           </div>
         </DialogContent>
@@ -570,9 +559,9 @@ export default function FarmerProfilePage() {
       <Dialog open={modal.kind === 'pay-dividends'} onOpenChange={(open) => !open && closeModal()}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>{t('farmer.modalPayDivs')}</DialogTitle>
+            <DialogTitle>Pay Dividends</DialogTitle>
             <DialogDescription>
-              {t(`herds.${modal.herdId}.name`, herds.find((h) => h.id === modal.herdId)?.name || '')} &middot; {t('farmer.modalPayoutIn')} {wallet.preferredDividendCurrency}
+              {herds.find((h) => h.id === modal.herdId)?.name} &middot; payout in {wallet.preferredDividendCurrency}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
@@ -583,7 +572,7 @@ export default function FarmerProfilePage() {
               return (
                 <>
                   <div className="rounded-lg bg-muted p-4 text-sm">
-                    <p className="text-muted-foreground">{t('farmer.modalTotalPayout')}</p>
+                    <p className="text-muted-foreground">Total payout</p>
                     <p className="text-2xl font-bold">{formatCurrency(totalPending)}</p>
                   </div>
                   {herd && herdPositions.length > 0 && (
@@ -591,10 +580,10 @@ export default function FarmerProfilePage() {
                       <table className="w-full text-xs">
                         <thead>
                           <tr className="border-b border-border text-left text-muted-foreground">
-                            <th className="pb-2 font-medium">{t('farmer.tableFarm')}</th>
-                            <th className="pb-2 font-medium">{t('farmer.modalTableTokens')}</th>
-                            <th className="pb-2 font-medium">{t('farmer.modalTableShare')}</th>
-                            <th className="pb-2 font-medium">{t('farmer.modalTablePayout')}</th>
+                            <th className="pb-2 font-medium">Farm</th>
+                            <th className="pb-2 font-medium">Tokens</th>
+                            <th className="pb-2 font-medium">Share</th>
+                            <th className="pb-2 font-medium">Payout</th>
                           </tr>
                         </thead>
                         <tbody>
@@ -603,7 +592,7 @@ export default function FarmerProfilePage() {
                             const payout = totalPending * share
                             return (
                               <tr key={pos.herdId} className="border-b border-border last:border-0">
-                                <td className="py-2 font-medium">{t(`herds.${pos.herdId}.name`, pos.herdName)}</td>
+                                <td className="py-2 font-medium">{pos.herdName}</td>
                                 <td className="py-2">{formatNumber(pos.tokensOwned)}</td>
                                 <td className="py-2 text-muted-foreground">{(share * 100).toFixed(1)}%</td>
                                 <td className="py-2 font-semibold text-emerald-600 dark:text-emerald-400">{formatCurrency(payout)}</td>
@@ -618,8 +607,8 @@ export default function FarmerProfilePage() {
               )
             })()}
             {feedback && <p className={`text-sm ${feedback.ok ? 'text-emerald-600 dark:text-emerald-400' : 'text-destructive'}`}>{feedback.msg}</p>}
-            <div className="flex justify-end gap-2">
-              <Button variant="outline" onClick={closeModal}>{t('farmer.modalCloseBtn')}</Button>
+            <div className="flex justify-end">
+              <Button variant="outline" onClick={closeModal}>Close</Button>
             </div>
           </div>
         </DialogContent>

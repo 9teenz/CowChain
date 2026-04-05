@@ -11,10 +11,12 @@ import { formatCurrency, formatNumber } from '@/lib/utils'
 import { listingPremiumPct, shortenWallet } from '@/lib/solana-contract'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Coins, ArrowUpDown, Wallet, TrendingUp, Plus } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 
 type SortKey = 'recent' | 'price-asc' | 'price-desc' | 'return-desc'
 
 export default function MarketplacePage() {
+  const { t } = useTranslation()
   const {
     state: { platform, herds, listings, positions },
     buyListing,
@@ -68,7 +70,7 @@ export default function MarketplacePage() {
     <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
       <div className="mb-8 flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
         <div>
-          <h1 className="text-3xl font-bold">P2P Marketplace</h1>
+          <h1 className="text-3xl font-bold">{t('marketplace.title')}</h1>
           <p className="mt-2 max-w-3xl text-muted-foreground">
             Buyers fill existing listings in SOL while receiving herd tokens at the matched price. Sort by herd, price, or return spread against NAV.
           </p>
@@ -82,11 +84,11 @@ export default function MarketplacePage() {
       <Dialog open={sellOpen} onOpenChange={setSellOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Sell My Tokens</DialogTitle>
+            <DialogTitle>{t('marketplace.sellMyTokens')}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 pt-2">
             <div>
-              <label className="mb-2 block text-sm font-medium">Herd</label>
+              <label className="mb-2 block text-sm font-medium">{t('marketplace.herdLabel')}</label>
               <select
                 value={sellHerdId}
                 onChange={(event) => setSellHerdId(event.target.value)}
@@ -100,11 +102,11 @@ export default function MarketplacePage() {
             </div>
             <div className="grid gap-4 sm:grid-cols-2">
               <div>
-                <label className="mb-2 block text-sm font-medium">Tokens to list</label>
+                <label className="mb-2 block text-sm font-medium">{t('marketplace.tokensToList')}</label>
                 <Input value={listingAmount} onChange={(event) => setListingAmount(event.target.value)} />
               </div>
               <div>
-                <label className="mb-2 block text-sm font-medium">Price per token</label>
+                <label className="mb-2 block text-sm font-medium">{t('marketplace.pricePerToken')}</label>
                 <Input value={listingPrice} onChange={(event) => setListingPrice(event.target.value)} />
               </div>
             </div>
@@ -132,16 +134,16 @@ export default function MarketplacePage() {
       </Dialog>
 
       <div className="mb-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCard title="Active Listings" value={formatNumber(filteredListings.length)} icon={ArrowUpDown} />
-        <StatCard title="Tokens For Sale" value={formatNumber(activeTokens)} icon={Coins} />
-        <StatCard title="Avg. vs CowChain" value={`${averagePremium.toFixed(2)}%`} icon={TrendingUp} />
-        <StatCard title="Settlement Rail" value="SOL" change="Seller receives SOL on fill" changeType="neutral" icon={Wallet} />
+        <StatCard title={t('marketplace.activeListings')} value={formatNumber(filteredListings.length)} icon={ArrowUpDown} />
+        <StatCard title={t('marketplace.tokensForSale')} value={formatNumber(activeTokens)} icon={Coins} />
+        <StatCard title={t('marketplace.avgVsCowChain')} value={`${averagePremium.toFixed(2)}%`} icon={TrendingUp} />
+        <StatCard title={t('marketplace.settlementRail')} value="SOL" change={t('marketplace.sellerReceives')} changeType="neutral" icon={Wallet} />
       </div>
 
       <Card>
         <CardHeader className="gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div>
-            <CardTitle>Order Book</CardTitle>
+            <CardTitle>{t('marketplace.orderBook')}</CardTitle>
           </div>
           <div className="flex flex-col gap-3 sm:flex-row">
             <select
