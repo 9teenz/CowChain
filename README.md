@@ -1,3 +1,5 @@
+![ShowCase](./public/ShowCase.png)
+
 # CowChain
 
 ## Стек аутентификации
