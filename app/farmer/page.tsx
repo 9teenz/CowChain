@@ -556,17 +556,17 @@ export default function FarmerProfilePage() {
                       <div className="flex flex-wrap items-center gap-6 rounded-lg bg-muted/50 px-4 py-3 text-sm">
                         <div>
                           <p className="text-xs text-muted-foreground">Дивиденд / токен</p>
-                          <p className="font-mono font-semibold text-primary">${s.dividendPerTokenUsd.toFixed(6)}</p>
+                          <p className="font-mono font-semibold text-primary">${s.dividendPerTokenUsd?.toFixed(6) ?? '0.000000'}</p>
                         </div>
                         <div>
                           <p className="text-xs text-muted-foreground">NAV до</p>
-                          <p className="font-mono">${s.navBeforeUsd.toFixed(2)}</p>
+                          <p className="font-mono">${s.navBeforeUsd?.toFixed(2) ?? 'N/A'}</p>
                         </div>
                         <ArrowRight className="h-4 w-4 text-muted-foreground" />
                         <div>
                           <p className="text-xs text-muted-foreground">NAV после</p>
-                          <p className={`font-mono font-semibold ${s.navAfterUsd < s.navBeforeUsd ? 'text-amber-500' : 'text-emerald-500'}`}>
-                            ${s.navAfterUsd.toFixed(2)}
+                          <p className={`font-mono font-semibold ${s.navAfterUsd && s.navBeforeUsd && s.navAfterUsd < s.navBeforeUsd ? 'text-amber-500' : 'text-emerald-500'}`}>
+                            ${s.navAfterUsd?.toFixed(2) ?? 'N/A'}
                           </p>
                         </div>
                         <div className="ml-auto text-xs text-muted-foreground">

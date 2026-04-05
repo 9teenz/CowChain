@@ -147,9 +147,9 @@ export function Navbar() {
             )}
 
             {wallet.connected && (
-              <div className="hidden items-center gap-2 rounded-full border border-border bg-card/80 px-3 py-1.5 text-sm text-muted-foreground lg:flex">
+              <div className="hidden h-9 items-center gap-2 rounded-md border border-input bg-background px-3 text-sm font-medium shadow-sm lg:flex text-muted-foreground">
                 <Coins className="h-4 w-4 text-primary" />
-                <span>{portfolioSummary.pendingDividendsUsd.toFixed(2)} pending</span>
+                <span>${portfolioSummary.pendingDividendsUsd.toFixed(2)}</span>
               </div>
             )}
 
@@ -165,7 +165,7 @@ export function Navbar() {
             {activeWalletAddress && (
               <Popover>
                 <PopoverTrigger asChild>
-                  <button className="hidden items-center gap-2 rounded-full border border-border bg-card/80 px-3 py-1.5 text-sm font-medium text-foreground transition-colors hover:bg-accent sm:flex">
+                  <button className="hidden h-9 items-center gap-2 rounded-md border border-input bg-background px-3 text-sm font-medium shadow-sm transition-colors hover:bg-accent hover:text-accent-foreground sm:flex text-foreground">
                     <Wallet className="h-4 w-4 text-primary" />
                     {solBalance !== null ? (
                       <span>{solBalance.toFixed(4)} SOL</span>
