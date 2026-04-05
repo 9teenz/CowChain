@@ -32,13 +32,9 @@ export default function ProfilePage() {
   const [isUnlinking, setIsUnlinking] = useState(false)
   const [phantomSolBalance, setPhantomSolBalance] = useState<number | null>(null)
   const [isSolBalanceLoading, setIsSolBalanceLoading] = useState(false)
-<<<<<<< Updated upstream
-  const [solBalanceStatus, setSolBalanceStatus] = useState<string>('Live balance')
+  const [solBalanceStatus, setSolBalanceStatus] = useState<string>(t('profile.liveBalance'))
   const [isTokenBalanceLoading, setIsTokenBalanceLoading] = useState(false)
   const [tokenBalanceStatus, setTokenBalanceStatus] = useState<string>('Live CowChain token balance')
-=======
-  const [solBalanceStatus, setSolBalanceStatus] = useState<string>(t('profile.liveBalance'))
->>>>>>> Stashed changes
   const [kindFilter, setKindFilter] = useState<'all' | 'nav-buy' | 'market-buy' | 'listing' | 'claim' | 'cow-sale'>('all')
   const [currencyFilter, setCurrencyFilter] = useState<'all' | 'SOL' | 'USDC'>('all')
   const {
@@ -313,11 +309,7 @@ export default function ProfilePage() {
                 </span>
                 <span className="flex items-center gap-1">
                   <Coins className="h-4 w-4" />
-<<<<<<< Updated upstream
-                  {formatNumber(portfolioSummary.userPlatformTokens)} {platform.symbol} owned
-=======
-                  {formatNumber(portfolioSummary.userPlatformTokens)} {t('profile.tokensOwned')}
->>>>>>> Stashed changes
+                  {formatNumber(portfolioSummary.userPlatformTokens)} {platform.symbol} {t('profile.tokensOwned')}
                 </span>
               </div>
             </div>

@@ -169,11 +169,7 @@ export default function DashboardPage() {
         <StatCard
           title={t('dashboard.platformTokenSupply')}
           value={formatNumber(totalTokens)}
-<<<<<<< Updated upstream
           change={tokenSupplyLabel}
-=======
-          change={t('dashboard.platformTokenSupplyDesc')}
->>>>>>> Stashed changes
           changeType="neutral"
           icon={Coins}
         />
