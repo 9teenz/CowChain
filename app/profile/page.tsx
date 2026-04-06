@@ -13,6 +13,7 @@ import { useDemoState } from '@/components/demo-state-provider'
 import { useAuthGuard } from '@/hooks/use-auth-guard'
 import { shortenWallet } from '@/lib/solana-contract'
 import { formatCurrency, formatNumber, cn } from '@/lib/utils'
+import { toast } from '@/hooks/use-toast'
 
 type Cluster = 'mainnet-beta' | 'devnet' | 'testnet'
 
@@ -311,7 +312,10 @@ export default function ProfilePage() {
             </div>
 
             <div className="flex flex-wrap gap-2">
-              <Button variant="outline" onClick={() => requireAuth(() => claimDividends(wallet.preferredDividendCurrency))}>
+              <Button variant="outline" onClick={() => requireAuth(async () => {
+                const result = await claimDividends(wallet.preferredDividendCurrency)
+                toast({ title: result.ok ? 'Дивиденды выплачены' : 'Ошибка', description: result.message, variant: result.ok ? 'default' : 'destructive' })
+              })}>
                 {t('profile.claimEarnings')}
               </Button>
               {(session?.user?.role === 'farmer' || session?.user?.role === 'admin') && (

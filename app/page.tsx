@@ -10,8 +10,9 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { useDemoState } from '@/components/demo-state-provider'
 import { formatCurrency, formatNumber } from '@/lib/utils'
 import { shortenWallet } from '@/lib/solana-contract'
-import { Wallet, TrendingUp, Coins, Users, Sparkles } from 'lucide-react'
+import { Wallet, TrendingUp, Coins, Users, Sparkles, Construction } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
+import { toast } from '@/hooks/use-toast'
 
 type TokenSupplyResponse = {
   ok?: boolean
@@ -23,7 +24,7 @@ type TokenSupplyResponse = {
 export default function DashboardPage() {
   const { t } = useTranslation()
   const {
-    state: { herds, listings, sales, wallet, platform },
+    state: { herds, sales, wallet, platform },
     portfolioSummary,
     claimDividends,
   } = useDemoState()
@@ -82,7 +83,6 @@ export default function DashboardPage() {
   const totalHerdSize = herds.reduce((sum, herd) => sum + herd.herdSize, 0)
   const totalTokens = liveTotalTokens
   const averageNav = platform.navPerTokenUsd
-  const topListings = [...listings].sort((left, right) => left.pricePerTokenUsd - right.pricePerTokenUsd).slice(0, 3)
   const latestSales = sales.slice(0, 3)
 
   return (
@@ -148,7 +148,10 @@ export default function DashboardPage() {
                 </Button>
                 <Button
                   className="flex-1 bg-primary text-primary-foreground"
-                  onClick={() => claimDividends(wallet.preferredDividendCurrency)}
+                  onClick={async () => {
+                    const result = await claimDividends(wallet.preferredDividendCurrency)
+                    toast({ title: result.ok ? 'Дивиденды выплачены' : 'Ошибка', description: result.message, variant: result.ok ? 'default' : 'destructive' })
+                  }}
                   disabled={!wallet.connected || portfolioSummary.pendingDividendsUsd <= 0}
                 >
                   {t('dashboard.claimPendingDividends')}
@@ -211,30 +214,11 @@ export default function DashboardPage() {
             <CardHeader>
               <CardTitle>{t('dashboard.bestMarketOffers')}</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
-              {topListings.map((listing) => {
-                const herd = herds.find((item) => item.id === listing.herdId)
-                return (
-                  <div key={listing.id} className="rounded-2xl border border-border p-4">
-                    <div className="flex items-start justify-between gap-3">
-                      <div>
-                        <p className="font-semibold">{t(`herds.${herd?.id}.name`, listing.herdName)}</p>
-                        <p className="text-sm text-muted-foreground">{t('dashboard.seller')} {shortenWallet(listing.sellerWallet)}</p>
-                      </div>
-                      <div className="text-right">
-                        <p className="font-semibold">{formatCurrency(listing.pricePerTokenUsd)}</p>
-                        <p className="text-xs text-muted-foreground">CowChain {formatCurrency(platform.navPerTokenUsd)}</p>
-                      </div>
-                    </div>
-                    <div className="mt-3 flex items-center justify-between text-sm text-muted-foreground">
-                      <span>{formatNumber(listing.tokensAvailable)} {t('dashboard.tokensAvailable')}</span>
-                      <Button variant="outline" size="sm" asChild>
-                        <Link href={`/herd/${listing.herdId}`}>{t('dashboard.buy')}</Link>
-                      </Button>
-                    </div>
-                  </div>
-                )
-              })}
+            <CardContent className="flex flex-col items-center justify-center py-12 text-center">
+              <Construction className="mb-3 h-10 w-10 text-muted-foreground" />
+              <p className="text-sm font-semibold text-muted-foreground">
+                {t('marketplace.temporarilyUnavailable')}
+              </p>
             </CardContent>
           </Card>
 

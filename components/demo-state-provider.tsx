@@ -25,7 +25,7 @@ import type {
 import { initialDemoState, PLATFORM_TOKEN_MINT, PLATFORM_TOKEN_SYMBOL } from '@/lib/demo-data'
 
 const STORAGE_KEY = 'cowchain-demo-state'
-const STORAGE_VERSION = 2
+const STORAGE_VERSION = 4
 const LEGACY_DEMO_PLATFORM_MINT = 'PtFmCoWcHaiN111111111111111111111111111'
 
 type ActionResult = {
@@ -47,9 +47,10 @@ interface DemoStateContextValue {
   buyAtNav: (herdId: string, tokenAmount: number, currency: BuyCurrency) => ActionResult
   listTokens: (herdId: string, tokenAmount: number, pricePerTokenUsd: number) => ActionResult
   buyListing: (listingId: string, tokenAmount: number) => ActionResult
-  claimDividends: (currency: BuyCurrency) => ActionResult
+  claimDividends: (currency: BuyCurrency) => Promise<ActionResult>
   simulateCowSale: (herdId: string, salePriceUsd: number, currency: BuyCurrency) => ActionResult
   addCowsToHerd: (herdId: string, count: number, costPerCowUsd: number) => ActionResult
+  addFarm: (name: string, location: string, herdSize: number, costPerCowUsd: number) => ActionResult
   updateMilkRevenue: (herdId: string, newAnnualRevenueUsd: number) => ActionResult
   portfolioSummary: {
     userPlatformTokens: number
@@ -639,9 +640,14 @@ export function DemoStateProvider({ children }: { children: ReactNode }) {
     }
   }
 
-  const claimDividends = (currency: BuyCurrency): ActionResult => {
+  const claimDividends = async (currency: BuyCurrency): Promise<ActionResult> => {
     if (!state.wallet.connected) {
       return { ok: false, message: 'Connect a wallet before claiming dividends.' }
+    }
+
+    const walletAddress = state.wallet.walletAddress?.trim()
+    if (!walletAddress) {
+      return { ok: false, message: 'No wallet address found.' }
     }
 
     const pendingUsd = state.positions.reduce((sum, item) => sum + item.pendingDividendsUsd, 0)
@@ -649,45 +655,77 @@ export function DemoStateProvider({ children }: { children: ReactNode }) {
       return { ok: false, message: 'No pending dividends are available to claim.' }
     }
 
-    const txId = generateDemoSignature()
+    try {
+      // 1. Fetch real SOL price
+      const priceRes = await fetch('/api/platform/sol-price', { cache: 'no-store' })
+      const priceData = (await priceRes.json()) as { ok?: boolean; priceUsd?: number }
+      if (!priceRes.ok || !priceData.ok || !priceData.priceUsd) {
+        return { ok: false, message: 'Unable to fetch current SOL price.' }
+      }
+      const solPriceUsd = priceData.priceUsd
 
-    setState((current) => {
-      const positions = current.positions.map((item) => ({
-        ...item,
-        claimedDividendsUsd: Number((item.claimedDividendsUsd + item.pendingDividendsUsd).toFixed(2)),
-        pendingDividendsUsd: 0,
-      }))
+      // 2. Send SOL to user's wallet
+      const payoutRes = await fetch('/api/wallet/payout-sol', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          recipientAddress: walletAddress,
+          amountUsd: pendingUsd,
+          solPriceUsd,
+        }),
+      })
+      const payoutData = (await payoutRes.json()) as {
+        ok?: boolean
+        txId?: string
+        amountSol?: number
+        error?: string
+      }
 
-      return pushTransaction(
-        {
-          ...current,
-          wallet: {
-            ...current.wallet,
-            solBalance: currency === 'SOL' ? Number((current.wallet.solBalance + usdToSol(pendingUsd)).toFixed(4)) : current.wallet.solBalance,
-            stablecoinBalance:
-              currency === 'USDC'
-                ? Number((current.wallet.stablecoinBalance + pendingUsd).toFixed(2))
-                : current.wallet.stablecoinBalance,
-            preferredDividendCurrency: currency,
+      if (!payoutRes.ok || !payoutData.ok || !payoutData.txId) {
+        return { ok: false, message: payoutData.error || 'SOL transfer failed.' }
+      }
+
+      const txId = payoutData.txId
+      const amountSol = payoutData.amountSol ?? 0
+
+      // 3. Update local state
+      setState((current) => {
+        const positions = current.positions.map((item) => ({
+          ...item,
+          claimedDividendsUsd: Number((item.claimedDividendsUsd + item.pendingDividendsUsd).toFixed(2)),
+          pendingDividendsUsd: 0,
+        }))
+
+        return pushTransaction(
+          {
+            ...current,
+            wallet: {
+              ...current.wallet,
+              solBalance: Number((current.wallet.solBalance + amountSol).toFixed(6)),
+              preferredDividendCurrency: currency,
+            },
+            positions,
           },
-          positions,
-        },
-        {
-          id: `txn-${txId}`,
-          kind: 'claim',
-          label: buildActionLabel('claim'),
-          amountUsd: Number(pendingUsd.toFixed(2)),
-          currency,
-          txId,
-          timestamp: new Date().toISOString(),
-        }
-      )
-    })
+          {
+            id: `txn-${txId}`,
+            kind: 'claim',
+            label: buildActionLabel('claim'),
+            amountUsd: Number(pendingUsd.toFixed(2)),
+            currency: 'SOL',
+            txId,
+            timestamp: new Date().toISOString(),
+          }
+        )
+      })
 
-    return {
-      ok: true,
-      message: `Claimed ${pendingUsd.toFixed(2)} in ${currency}.`,
-      txId,
+      return {
+        ok: true,
+        message: `Claimed $${pendingUsd.toFixed(2)} → ${amountSol.toFixed(6)} SOL sent to ${walletAddress.slice(0, 6)}... (1 SOL = $${solPriceUsd.toFixed(2)})`,
+        txId,
+      }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Dividend claim failed.'
+      return { ok: false, message }
     }
   }
 
@@ -815,6 +853,48 @@ export function DemoStateProvider({ children }: { children: ReactNode }) {
     }))
 
     return { ok: true, message: `${count} cow(s) added to ${herd.name}. CowChain price updated.` }
+  }
+
+  const addFarm = (name: string, location: string, herdSize: number, costPerCowUsd: number): ActionResult => {
+    const trimmedName = name.trim()
+    const trimmedLocation = location.trim()
+    if (!trimmedName) return { ok: false, message: 'Farm name is required.' }
+    if (!trimmedLocation) return { ok: false, message: 'Location is required.' }
+    if (herdSize <= 0 || costPerCowUsd <= 0) return { ok: false, message: 'Herd size and cost must be positive.' }
+
+    const id = trimmedName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
+    if (state.herds.some((h) => h.id === id)) {
+      return { ok: false, message: 'A farm with this name already exists.' }
+    }
+
+    const totalValueUsd = herdSize * costPerCowUsd
+    const estimatedAnnualRevenue = Math.round(totalValueUsd * 3.5)
+    const projectedYieldPct = Number(((estimatedAnnualRevenue / totalValueUsd) * 100 * 0.05).toFixed(1))
+
+    const newHerd: HerdPool = {
+      id,
+      name: trimmedName,
+      location: trimmedLocation,
+      description: `New farm registered by the farmer.`,
+      herdSize,
+      herdAgeMonths: 0,
+      milkProductionLitersPerDay: Math.round(herdSize * 28),
+      expectedAnnualRevenueUsd: estimatedAnnualRevenue,
+      totalValueUsd,
+      navPerTokenUsd: 1.0,
+      marketPriceUsd: 1.0,
+      projectedYieldPct,
+      healthStatus: 'Strong',
+      totalDividendsDistributedUsd: 0,
+      verified: false,
+    }
+
+    setState((current) => ({
+      ...current,
+      herds: [...current.herds, newHerd],
+    }))
+
+    return { ok: true, message: `Farm "${trimmedName}" created successfully.` }
   }
 
   const updateMilkRevenue = (herdId: string, newAnnualRevenueUsd: number): ActionResult => {
@@ -1054,6 +1134,7 @@ export function DemoStateProvider({ children }: { children: ReactNode }) {
       claimDividends,
       simulateCowSale,
       addCowsToHerd,
+      addFarm,
       updateMilkRevenue,
       portfolioSummary,
     }),

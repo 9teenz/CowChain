@@ -61,7 +61,7 @@ import {
   YAxis,
 } from 'recharts'
 
-type ModalKind = 'add-cows' | 'sell-cow' | 'update-revenue' | 'pay-dividends' | null
+type ModalKind = 'add-cows' | 'sell-cow' | 'update-revenue' | 'pay-dividends' | 'create-farm' | null
 
 interface ModalState {
   kind: ModalKind
@@ -92,6 +92,7 @@ export default function FarmerProfilePage() {
     state: { herds, positions, sales, addEvents, transactions, wallet, platform },
     simulateCowSale,
     addCowsToHerd,
+    addFarm,
     updateMilkRevenue,
     claimDividends,
   } = useDemoState()
@@ -105,6 +106,10 @@ export default function FarmerProfilePage() {
   const [cowCost, setCowCost]         = useState('1200')
   const [salePrice, setSalePrice]     = useState('1500')
   const [milkRevenue, setMilkRevenue] = useState('')
+  const [newFarmName, setNewFarmName]         = useState('')
+  const [newFarmLocation, setNewFarmLocation] = useState('')
+  const [newFarmHerdSize, setNewFarmHerdSize] = useState('20')
+  const [newFarmCowCost, setNewFarmCowCost]   = useState('1200')
 
   const fullName     = session?.user?.name ?? 'Farmer'
   const farmerWallet = wallet.connected ? wallet.walletAddress : '—'
@@ -155,9 +160,10 @@ export default function FarmerProfilePage() {
     if (herd) setMilkRevenue(String(herd.expectedAnnualRevenueUsd))
     setModal({ kind, herdId })
     if (kind === 'pay-dividends') {
-      const result = claimDividends(wallet.preferredDividendCurrency)
-      setFeedback({ ok: result.ok, msg: result.message })
-      if (result.ok) window.setTimeout(closeModal, 1800)
+      void claimDividends(wallet.preferredDividendCurrency).then((result) => {
+        setFeedback({ ok: result.ok, msg: result.message })
+        if (result.ok) window.setTimeout(closeModal, 1800)
+      })
     }
   }
 
@@ -181,8 +187,20 @@ export default function FarmerProfilePage() {
     if (result.ok) window.setTimeout(closeModal, 1400)
   }
 
-  const handlePayDividends = () => {
-    const result = claimDividends(wallet.preferredDividendCurrency)
+  const handleCreateFarm = () => {
+    const result = addFarm(newFarmName, newFarmLocation, parseInt(newFarmHerdSize), parseFloat(newFarmCowCost))
+    setFeedback({ ok: result.ok, msg: result.message })
+    if (result.ok) {
+      setNewFarmName('')
+      setNewFarmLocation('')
+      setNewFarmHerdSize('20')
+      setNewFarmCowCost('1200')
+      window.setTimeout(closeModal, 1400)
+    }
+  }
+
+  const handlePayDividends = async () => {
+    const result = await claimDividends(wallet.preferredDividendCurrency)
     setFeedback({ ok: result.ok, msg: result.message })
     if (result.ok) window.setTimeout(closeModal, 1400)
   }
@@ -243,7 +261,7 @@ export default function FarmerProfilePage() {
             </div>
 
             <div className="flex flex-wrap gap-2">
-              <Button className="gap-2">
+              <Button className="gap-2" onClick={() => openModal('create-farm', '')}>
                 <Plus className="h-4 w-4" />
                 {t('farmer.createFarm')}
               </Button>
@@ -322,7 +340,7 @@ export default function FarmerProfilePage() {
                     </div>
                     <div className="rounded-lg bg-muted/50 p-3">
                       <p className="text-xs text-muted-foreground">{t('farmer.milkYearLabel')}</p>
-                      <p className="text-lg font-bold">{formatCurrency(herd.expectedAnnualRevenueUsd)}</p>
+                      <p className="text-lg font-bold">{formatCurrency(Math.round(herd.expectedAnnualRevenueUsd / 12))}</p>
                     </div>
                   </div>
 
@@ -784,6 +802,41 @@ export default function FarmerProfilePage() {
             {feedback && <p className={`text-sm ${feedback.ok ? 'text-emerald-600 dark:text-emerald-400' : 'text-destructive'}`}>{feedback.msg}</p>}
             <div className="flex justify-end gap-2">
               <Button variant="outline" onClick={closeModal}>{t('farmer.modalCloseBtn')}</Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog: Create farm */}
+      <Dialog open={modal.kind === 'create-farm'} onOpenChange={(open) => !open && closeModal()}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{t('farmer.createFarm')}</DialogTitle>
+            <DialogDescription>{t('farmer.createFarmDesc')}</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-1.5">
+              <Label htmlFor="farm-name">{t('farmer.farmNameLabel')}</Label>
+              <Input id="farm-name" value={newFarmName} onChange={(e) => setNewFarmName(e.target.value)} placeholder={t('farmer.farmNamePlaceholder')} />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="farm-location">{t('farmer.farmLocationLabel')}</Label>
+              <Input id="farm-location" value={newFarmLocation} onChange={(e) => setNewFarmLocation(e.target.value)} placeholder={t('farmer.farmLocationPlaceholder')} />
+            </div>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-1.5">
+                <Label htmlFor="farm-herd-size">{t('farmer.farmHerdSizeLabel')}</Label>
+                <Input id="farm-herd-size" type="number" min="1" value={newFarmHerdSize} onChange={(e) => setNewFarmHerdSize(e.target.value)} />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="farm-cow-cost">{t('farmer.farmCowCostLabel')}</Label>
+                <Input id="farm-cow-cost" type="number" min="1" value={newFarmCowCost} onChange={(e) => setNewFarmCowCost(e.target.value)} />
+              </div>
+            </div>
+            {feedback && <p className={`text-sm ${feedback.ok ? 'text-emerald-600 dark:text-emerald-400' : 'text-destructive'}`}>{feedback.msg}</p>}
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={closeModal}>{t('farmer.modalCancel')}</Button>
+              <Button onClick={handleCreateFarm}>{t('farmer.createFarmBtn')}</Button>
             </div>
           </div>
         </DialogContent>

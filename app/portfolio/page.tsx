@@ -10,6 +10,7 @@ import { useDemoState } from '@/components/demo-state-provider'
 import { useAuthGuard } from '@/hooks/use-auth-guard'
 import { formatCurrency, formatNumber } from '@/lib/utils'
 import { useTranslation } from 'react-i18next'
+import { toast } from '@/hooks/use-toast'
 
 export default function PortfolioPage() {
   const {
@@ -35,7 +36,7 @@ export default function PortfolioPage() {
       <div className="mb-8 grid gap-4 sm:grid-cols-3">
         <StatCard
           title={t("portfolio.platformTokenBalance")}
-          value={formatNumber(portfolioSummary.userPlatformTokens)}
+          value={formatNumber(platform.totalSupply)}
           change={t("portfolio.acrossAllPools")}
           changeType="neutral"
           icon={Coins}
@@ -115,7 +116,10 @@ export default function PortfolioPage() {
             </div>
             <Button
               className="w-full"
-              onClick={() => requireAuth(() => claimDividends(wallet.preferredDividendCurrency))}
+              onClick={() => requireAuth(async () => {
+                const result = await claimDividends(wallet.preferredDividendCurrency)
+                toast({ title: result.ok ? 'Дивиденды выплачены' : 'Ошибка', description: result.message, variant: result.ok ? 'default' : 'destructive' })
+              })}
               disabled={portfolioSummary.pendingDividendsUsd <= 0}
             >
               {t("portfolio.claimDivsBtn")}
