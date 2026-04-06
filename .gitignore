@@ -11,3 +11,16 @@ next.user-config.*
 node_modules
 .next/
 .DS_Store
+
+
+*.tsbuildinfo
+coverage/
+test-results/
+playwright-report/
+
+# Solana / Anchor / Rust artifacts
+target/
+programs/**/target/
+.anchor/
+test-ledger/
+**/*.rs.bk

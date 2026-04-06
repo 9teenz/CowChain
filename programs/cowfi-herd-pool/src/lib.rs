@@ -1,9 +1,20 @@
 use anchor_lang::prelude::*;
+use anchor_lang::solana_program::{program::invoke, system_instruction};
 use anchor_spl::token::{self, Mint, MintTo, Token, TokenAccount, Transfer};
 
-declare_id!("CowChain111111111111111111111111111111111111");
+declare_id!("7CuP8kCTncbmy3H6H1UzvbSTbgKGjLQnRYSSm2aBF8kn");
 
 const DIVIDEND_SCALE: u128 = 1_000_000_000_000;
+
+fn token_amount_to_base_units(token_amount: u64, decimals: u8) -> Result<u64> {
+    let scale = 10u64
+        .checked_pow(decimals as u32)
+        .ok_or(HerdError::MathOverflow)?;
+
+    token_amount
+        .checked_mul(scale)
+        .ok_or(HerdError::MathOverflow.into())
+}
 
 #[program]
 pub mod cowchain_herd_pool {
@@ -15,6 +26,7 @@ pub mod cowchain_herd_pool {
         platform.authority = ctx.accounts.authority.key();
         platform.quote_mint = ctx.accounts.quote_mint.key();
         platform.platform_mint = ctx.accounts.platform_mint.key();
+        platform.sol_treasury = ctx.accounts.authority.key();
         platform.total_token_supply = total_supply;
         platform.circulating_tokens = 0;
         platform.bump = ctx.bumps.platform;
@@ -63,6 +75,9 @@ pub mod cowchain_herd_pool {
         )?;
 
         let platform = &mut ctx.accounts.platform;
+        let mint_amount = token_amount_to_base_units(token_amount, ctx.accounts.platform_mint.decimals)?;
+        let platform_bump = [platform.bump];
+        let platform_signer_seeds: &[&[u8]] = &[b"platform", &platform_bump];
         let mint_accounts = MintTo {
             mint: ctx.accounts.platform_mint.to_account_info(),
             to: ctx.accounts.buyer_platform_account.to_account_info(),
@@ -72,9 +87,87 @@ pub mod cowchain_herd_pool {
             CpiContext::new_with_signer(
                 ctx.accounts.token_program.to_account_info(),
                 mint_accounts,
-                &[platform_signer_seeds(platform)],
+                &[platform_signer_seeds],
             ),
-            token_amount,
+            mint_amount,
+        )?;
+
+        platform.circulating_tokens = platform
+            .circulating_tokens
+            .checked_add(token_amount)
+            .ok_or(HerdError::MathOverflow)?;
+
+        position.owner = ctx.accounts.buyer.key();
+        position.herd_pool = herd_pool.key();
+        position.token_balance = position
+            .token_balance
+            .checked_add(token_amount)
+            .ok_or(HerdError::MathOverflow)?;
+        position.dividend_checkpoint = herd_pool.cumulative_dividend_per_token;
+        position.bump = ctx.bumps.position;
+        Ok(())
+    }
+
+    pub fn buy_tokens_with_sol(
+        ctx: Context<BuyTokensWithSol>,
+        token_amount: u64,
+        sol_price_usd_e6: u64,
+        max_lamports: u64,
+    ) -> Result<()> {
+        require!(token_amount > 0, HerdError::InvalidTokenAmount);
+        require!(sol_price_usd_e6 > 0, HerdError::InvalidSolPrice);
+
+        let herd_pool = &mut ctx.accounts.herd_pool;
+        let position = &mut ctx.accounts.position;
+
+        accrue_dividends(herd_pool, position)?;
+
+        let quote_cost_e6 = (token_amount as u128)
+            .checked_mul(herd_pool.nav_per_token_e6 as u128)
+            .ok_or(HerdError::MathOverflow)?;
+
+        let required_lamports = quote_cost_e6
+            .checked_mul(1_000_000_000)
+            .ok_or(HerdError::MathOverflow)?
+            .checked_add(sol_price_usd_e6 as u128 - 1)
+            .ok_or(HerdError::MathOverflow)?
+            .checked_div(sol_price_usd_e6 as u128)
+            .ok_or(HerdError::MathOverflow)?;
+
+        require!(required_lamports > 0, HerdError::InvalidSolPrice);
+        require!(required_lamports <= max_lamports as u128, HerdError::SlippageExceeded);
+
+        let platform = &mut ctx.accounts.platform;
+        require_keys_eq!(platform.sol_treasury, ctx.accounts.sol_treasury.key(), HerdError::InvalidSolTreasury);
+
+        invoke(
+            &system_instruction::transfer(
+                &ctx.accounts.buyer.key(),
+                &ctx.accounts.sol_treasury.key(),
+                required_lamports as u64,
+            ),
+            &[
+                ctx.accounts.buyer.to_account_info(),
+                ctx.accounts.sol_treasury.to_account_info(),
+                ctx.accounts.system_program.to_account_info(),
+            ],
+        )?;
+
+        let mint_amount = token_amount_to_base_units(token_amount, ctx.accounts.platform_mint.decimals)?;
+        let platform_bump = [platform.bump];
+        let platform_signer_seeds: &[&[u8]] = &[b"platform", &platform_bump];
+        let mint_accounts = MintTo {
+            mint: ctx.accounts.platform_mint.to_account_info(),
+            to: ctx.accounts.buyer_platform_account.to_account_info(),
+            authority: platform.to_account_info(),
+        };
+        token::mint_to(
+            CpiContext::new_with_signer(
+                ctx.accounts.token_program.to_account_info(),
+                mint_accounts,
+                &[platform_signer_seeds],
+            ),
+            mint_amount,
         )?;
 
         platform.circulating_tokens = platform
@@ -158,16 +251,18 @@ pub mod cowchain_herd_pool {
             quote_cost,
         )?;
 
+        let listing_bump = [listing.bump];
+        let listing_signer_seeds: &[&[u8]] = &[b"listing", listing.seller.as_ref(), &listing_bump];
         let herd_transfer = Transfer {
             from: ctx.accounts.escrow_platform_account.to_account_info(),
             to: ctx.accounts.buyer_platform_account.to_account_info(),
-            authority: ctx.accounts.listing.to_account_info(),
+            authority: listing.to_account_info(),
         };
         token::transfer(
             CpiContext::new_with_signer(
                 ctx.accounts.token_program.to_account_info(),
                 herd_transfer,
-                &[listing_signer_seeds(listing)],
+                &[listing_signer_seeds],
             ),
             token_amount,
         )?;
@@ -245,16 +340,18 @@ pub mod cowchain_herd_pool {
         let amount = position.pending_dividends_e6;
         require!(amount > 0, HerdError::NothingToClaim);
 
+        let herd_pool_bump = [herd_pool.bump];
+        let herd_pool_signer_seeds: &[&[u8]] = &[b"herd-pool", herd_pool.name.as_bytes(), &herd_pool_bump];
         let transfer_accounts = Transfer {
             from: ctx.accounts.quote_vault.to_account_info(),
             to: ctx.accounts.owner_quote_account.to_account_info(),
-            authority: ctx.accounts.herd_pool.to_account_info(),
+            authority: herd_pool.to_account_info(),
         };
         token::transfer(
             CpiContext::new_with_signer(
                 ctx.accounts.token_program.to_account_info(),
                 transfer_accounts,
-                &[herd_pool_signer_seeds(herd_pool)],
+                &[herd_pool_signer_seeds],
             ),
             amount,
         )?;
@@ -288,18 +385,6 @@ fn accrue_dividends(herd_pool: &HerdPool, position: &mut InvestorPosition) -> Re
         .ok_or(HerdError::MathOverflow)?;
     position.dividend_checkpoint = herd_pool.cumulative_dividend_per_token;
     Ok(())
-}
-
-fn platform_signer_seeds<'a>(platform: &'a Platform) -> [&'a [u8]; 2] {
-    [b"platform", &[platform.bump]]
-}
-
-fn herd_pool_signer_seeds<'a>(herd_pool: &'a HerdPool) -> [&'a [u8]; 3] {
-    [b"herd-pool", herd_pool.name.as_bytes(), &[herd_pool.bump]]
-}
-
-fn listing_signer_seeds<'a>(listing: &'a MarketplaceListing) -> [&'a [u8]; 3] {
-    [b"listing", listing.seller.as_ref(), &[listing.bump]]
 }
 
 #[derive(Accounts)]
@@ -353,6 +438,32 @@ pub struct BuyTokensAtNav<'info> {
     pub quote_vault: Account<'info, TokenAccount>,
     #[account(mut)]
     pub buyer_quote_account: Account<'info, TokenAccount>,
+    #[account(mut)]
+    pub buyer_platform_account: Account<'info, TokenAccount>,
+    #[account(
+        init_if_needed,
+        payer = buyer,
+        space = 8 + InvestorPosition::INIT_SPACE,
+        seeds = [b"position", herd_pool.key().as_ref(), buyer.key().as_ref()],
+        bump,
+    )]
+    pub position: Account<'info, InvestorPosition>,
+    pub token_program: Program<'info, Token>,
+    pub system_program: Program<'info, System>,
+}
+
+#[derive(Accounts)]
+pub struct BuyTokensWithSol<'info> {
+    #[account(mut)]
+    pub buyer: Signer<'info>,
+    #[account(mut)]
+    pub herd_pool: Account<'info, HerdPool>,
+    #[account(mut, seeds = [b"platform"], bump = platform.bump)]
+    pub platform: Account<'info, Platform>,
+    #[account(mut)]
+    pub platform_mint: Account<'info, Mint>,
+    #[account(mut)]
+    pub sol_treasury: SystemAccount<'info>,
     #[account(mut)]
     pub buyer_platform_account: Account<'info, TokenAccount>,
     #[account(
@@ -464,6 +575,7 @@ pub struct Platform {
     pub authority: Pubkey,
     pub quote_mint: Pubkey,
     pub platform_mint: Pubkey,
+    pub sol_treasury: Pubkey,
     pub total_token_supply: u64,
     pub circulating_tokens: u64,
     pub bump: u8,
@@ -525,6 +637,12 @@ pub enum HerdError {
     NothingToClaim,
     #[msg("Cow sale price must be positive.")]
     InvalidSalePrice,
+    #[msg("SOL price must be positive.")]
+    InvalidSolPrice,
+    #[msg("Provided SOL treasury account does not match the platform configuration.")]
+    InvalidSolTreasury,
+    #[msg("Quoted SOL amount moved outside the allowed slippage window.")]
+    SlippageExceeded,
     #[msg("Herd name exceeds the maximum length.")]
     NameTooLong,
 }

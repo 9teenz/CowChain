@@ -70,7 +70,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 export function normalizePlatformMint(value: unknown) {
   const mint = typeof value === 'string' ? value.trim() : ''
 
-  if (!mint || mint === LEGACY_DEMO_PLATFORM_MINT) {
+  if (!mint || mint === LEGACY_DEMO_PLATFORM_MINT || mint !== PLATFORM_TOKEN_MINT) {
     return PLATFORM_TOKEN_MINT
   }
 

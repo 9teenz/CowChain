@@ -1,6 +1,22 @@
 export type SettlementCurrency = 'SOL' | 'USDC'
 
 export const SOL_USD_RATE = 155
+export const LAMPORTS_PER_SOL = 1_000_000_000
+
+export type NavPurchaseQuoteInput = {
+  tokenAmount: number
+  navPerTokenUsd: number
+  solUsdRate?: number
+}
+
+export type NavPurchaseQuote = {
+  tokenAmount: number
+  navPerTokenUsd: number
+  usdTotal: number
+  solUsdRate: number
+  solTotal: number
+  lamports: number
+}
 
 const BASE58_ALPHABET = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz'
 
@@ -27,12 +43,47 @@ export function calculateNavAfterSale(currentNavUsd: number, totalTokens: number
   return round(Math.max(0.25, currentNavUsd - bufferedDrop), 4)
 }
 
-export function usdToSol(usdAmount: number) {
-  return round(usdAmount / SOL_USD_RATE, 4)
+export function usdToSol(usdAmount: number, solUsdRate = SOL_USD_RATE) {
+  if (usdAmount <= 0 || solUsdRate <= 0) {
+    return 0
+  }
+
+  return round(usdAmount / solUsdRate, 4)
 }
 
-export function solToUsd(solAmount: number) {
-  return round(solAmount * SOL_USD_RATE, 2)
+export function solToUsd(solAmount: number, solUsdRate = SOL_USD_RATE) {
+  if (solAmount <= 0 || solUsdRate <= 0) {
+    return 0
+  }
+
+  return round(solAmount * solUsdRate, 2)
+}
+
+export function lamportsToSol(lamports: number) {
+  if (lamports <= 0) {
+    return 0
+  }
+
+  return round(lamports / LAMPORTS_PER_SOL, 4)
+}
+
+export function calculateNavPurchaseQuote({ tokenAmount, navPerTokenUsd, solUsdRate = SOL_USD_RATE }: NavPurchaseQuoteInput): NavPurchaseQuote {
+  const safeTokenAmount = Number.isFinite(tokenAmount) && tokenAmount > 0 ? tokenAmount : 0
+  const safeNavPerTokenUsd = Number.isFinite(navPerTokenUsd) && navPerTokenUsd > 0 ? navPerTokenUsd : 0
+  const safeSolUsdRate = Number.isFinite(solUsdRate) && solUsdRate > 0 ? solUsdRate : SOL_USD_RATE
+
+  const usdTotal = round(safeTokenAmount * safeNavPerTokenUsd, 2)
+  const solTotal = usdToSol(usdTotal, safeSolUsdRate)
+  const lamports = Math.round(solTotal * LAMPORTS_PER_SOL)
+
+  return {
+    tokenAmount: safeTokenAmount,
+    navPerTokenUsd: safeNavPerTokenUsd,
+    usdTotal,
+    solUsdRate: safeSolUsdRate,
+    solTotal,
+    lamports,
+  }
 }
 
 export function generateDemoSignature(length = 24) {

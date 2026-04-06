@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
+import { DashboardBuyPanel } from '@/components/dashboard-buy-panel'
 import { HerdCard } from '@/components/herd-card'
 import { StatCard } from '@/components/stat-card'
 import { Button } from '@/components/ui/button'
@@ -143,7 +144,7 @@ export default function DashboardPage() {
                   className="flex-1 bg-white text-slate-950 hover:bg-white/90"
                   asChild
                 >
-                  <Link href="/marketplace">{t('dashboard.buyCowchainToken')}</Link>
+                  <Link href="#buy-cowchain">{t('dashboard.buyCowchainToken')}</Link>
                 </Button>
                 <Button
                   className="flex-1 bg-primary text-primary-foreground"
@@ -180,6 +181,10 @@ export default function DashboardPage() {
           changeType="positive"
           icon={TrendingUp}
         />
+      </div>
+
+      <div id="buy-cowchain" className="mt-10">
+        <DashboardBuyPanel />
       </div>
 
       <div className="mt-10 grid gap-6 lg:grid-cols-[1.3fr_0.9fr]">

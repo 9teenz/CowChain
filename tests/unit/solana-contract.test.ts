@@ -3,6 +3,7 @@ import {
   SOL_USD_RATE,
   buildActionLabel,
   calculateNavAfterSale,
+  calculateNavPurchaseQuote,
   calculateUserDividend,
   listingPremiumPct,
   projectedMarketValue,
@@ -35,6 +36,17 @@ describe('solana-contract helpers', () => {
     expect(sol).toBe(2)
     expect(solToUsd(sol)).toBe(310)
     expect(SOL_USD_RATE).toBe(155)
+  })
+
+  it('builds a NAV purchase quote in SOL and lamports', () => {
+    expect(calculateNavPurchaseQuote({ tokenAmount: 100, navPerTokenUsd: 1.02, solUsdRate: 200 })).toEqual({
+      tokenAmount: 100,
+      navPerTokenUsd: 1.02,
+      usdTotal: 102,
+      solUsdRate: 200,
+      solTotal: 0.51,
+      lamports: 510000000,
+    })
   })
 
   it('shortens long wallet and leaves short intact', () => {

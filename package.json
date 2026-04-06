@@ -16,6 +16,8 @@
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
     "test:all": "npm run test && npm run test:e2e",
+    "solana:init:devnet": "node scripts/init-cowchain-devnet.mjs",
+    "solana:test-buy": "node scripts/init-cowchain-devnet.mjs --test-buy",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
     "prisma:studio": "prisma studio"
