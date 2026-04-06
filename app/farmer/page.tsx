@@ -24,7 +24,6 @@ import {
   RefreshCw,
   TrendingUp,
   Users,
-  Users2,
   Wallet,
 } from 'lucide-react'
 import { StatCard } from '@/components/stat-card'
@@ -90,7 +89,7 @@ export default function FarmerProfilePage() {
   const { data: session } = useSession()
   const { t } = useTranslation()
   const {
-    state: { herds, positions, sales, addEvents, investors, transactions, wallet, platform },
+    state: { herds, positions, sales, addEvents, transactions, wallet, platform },
     simulateCowSale,
     addCowsToHerd,
     updateMilkRevenue,
@@ -300,9 +299,6 @@ export default function FarmerProfilePage() {
           <TabsTrigger value="history" className="gap-1.5">
             <Beef className="h-4 w-4" /> История
           </TabsTrigger>
-          <TabsTrigger value="investors" className="gap-1.5">
-            <Users2 className="h-4 w-4" /> Инвесторы
-          </TabsTrigger>
         </TabsList>
 
         {/* FARMS */}
@@ -328,22 +324,6 @@ export default function FarmerProfilePage() {
                       <p className="text-xs text-muted-foreground">{t('farmer.milkYearLabel')}</p>
                       <p className="text-lg font-bold">{formatCurrency(herd.expectedAnnualRevenueUsd)}</p>
                     </div>
-                  </div>
-
-                  <div className="space-y-1">
-                    <div className="flex justify-between text-xs text-muted-foreground">
-                      <span>{t('farmer.tokensSoldLabel')}</span>
-                      <span>{formatNumber(herd.totalTokens - herd.availableDirectTokens)} / {formatNumber(herd.totalTokens)}</span>
-                    </div>
-                    <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
-                      <div
-                        className="h-full rounded-full bg-primary transition-all"
-                        style={{ width: `${((herd.totalTokens - herd.availableDirectTokens) / herd.totalTokens) * 100}%` }}
-                      />
-                    </div>
-                    <p className="text-right text-xs text-muted-foreground">
-                      {(((herd.totalTokens - herd.availableDirectTokens) / herd.totalTokens) * 100).toFixed(1)}% {t('farmer.soldLabel')}
-                    </p>
                   </div>
 
                   <div className="mt-auto grid grid-cols-2 gap-2">
@@ -679,142 +659,7 @@ export default function FarmerProfilePage() {
           </div>
         </TabsContent>
 
-        {/* INVESTORS */}
-        <TabsContent value="investors">
-          <div className="space-y-6">
-            <div className="grid gap-4 sm:grid-cols-3">
-              <StatCard
-                title="Всего инвесторов"
-                value={formatNumber((investors ?? []).length)}
-                change="Держатели токенов CowChain"
-                changeType="neutral"
-                icon={Users2}
-              />
-              <StatCard
-                title="Токены у инвесторов"
-                value={formatNumber((investors ?? []).reduce((s, i) => s + i.tokensOwned, 0))}
-                change={`из ${formatNumber(platform.totalSupply)} всего`}
-                changeType="neutral"
-                icon={Coins}
-              />
-              <StatCard
-                title="Ожидающие дивиденды"
-                value={formatCurrency((investors ?? []).reduce((s, i) => s + i.pendingDividendsUsd, 0))}
-                change="Сумма по всем инвесторам"
-                changeType="positive"
-                icon={Wallet}
-              />
-            </div>
 
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-base">
-                  <Users2 className="h-4 w-4 text-primary" />
-                  Инвесторы платформы
-                </CardTitle>
-                <CardDescription>
-                  Формула: Дивиденд = Цена продажи ÷ Всего токенов × Токены инвестора
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="overflow-x-auto">
-                  <table className="w-full min-w-[640px] text-sm">
-                    <thead>
-                      <tr className="border-b border-border text-left text-muted-foreground">
-                        <th className="pb-3 font-medium">Инвестор</th>
-                        <th className="pb-3 font-medium">Кошелёк</th>
-                        <th className="pb-3 font-medium">Токены</th>
-                        <th className="pb-3 font-medium">Доля</th>
-                        <th className="pb-3 font-medium">Получено всего</th>
-                        <th className="pb-3 font-medium">Ожидает выплаты</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {(investors ?? []).map((inv) => {
-                        const share = platform.totalSupply > 0 ? (inv.tokensOwned / platform.totalSupply) * 100 : 0
-                        const totalEarned = inv.claimedDividendsUsd + inv.pendingDividendsUsd
-                        return (
-                          <tr key={inv.id} className="border-b border-border last:border-0">
-                            <td className="py-4">
-                              <div className="flex items-center gap-3">
-                                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-sm font-bold text-primary">
-                                  {inv.avatarInitials}
-                                </div>
-                                <span className="font-medium">{inv.name}</span>
-                              </div>
-                            </td>
-                            <td className="py-4 font-mono text-xs text-muted-foreground">{shortenWallet(inv.walletAddress)}</td>
-                            <td className="py-4 font-semibold">{formatNumber(inv.tokensOwned)}</td>
-                            <td className="py-4 text-muted-foreground">{share.toFixed(2)}%</td>
-                            <td className="py-4 text-sky-600 dark:text-sky-400">{formatCurrency(totalEarned)}</td>
-                            <td className="py-4">
-                              <span className={`font-semibold ${inv.pendingDividendsUsd > 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-muted-foreground'}`}>
-                                {formatCurrency(inv.pendingDividendsUsd)}
-                              </span>
-                            </td>
-                          </tr>
-                        )
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-              </CardContent>
-            </Card>
-
-            {sales.length > 0 && (
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2 text-base">
-                    <Beef className="h-4 w-4 text-amber-500" />
-                    История выплат по продажам
-                  </CardTitle>
-                  <CardDescription>
-                    Цена продажи ÷ Всего токенов = Дивиденд на токен → × Токены инвестора = Выплата
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  {sales.map((s) => (
-                    <div key={s.id} className="overflow-hidden rounded-xl border border-border">
-                      <div className="flex items-center justify-between gap-4 bg-muted/40 px-4 py-3">
-                        <div className="flex items-center gap-2">
-                          <ArrowUpRight className="h-4 w-4 text-amber-500" />
-                          <span className="font-semibold text-sm">{s.herdName} — {s.cowTag}</span>
-                          <span className="text-xs text-muted-foreground">{new Date(s.saleDate).toLocaleDateString('ru-RU')}</span>
-                        </div>
-                        <div className="flex items-center gap-3">
-                          <span className="rounded bg-primary/10 px-2 py-0.5 font-mono text-xs text-primary">
-                            ${s.dividendPerTokenUsd.toFixed(6)}/token
-                          </span>
-                          <span className="font-bold text-emerald-600 dark:text-emerald-400">{formatCurrency(s.salePriceUsd)}</span>
-                        </div>
-                      </div>
-                      <div className="divide-y divide-border">
-                        {(s.investorDividends ?? []).map((inv) => (
-                          <div key={inv.investorId} className="flex items-center justify-between gap-4 px-4 py-3 text-sm">
-                            <div className="flex items-center gap-2.5">
-                              <div className="flex h-7 w-7 items-center justify-center rounded-full bg-primary/10 text-[11px] font-bold text-primary">
-                                {inv.investorName.split(' ').map((n) => n[0]).join('')}
-                              </div>
-                              <span className="font-medium">{inv.investorName}</span>
-                            </div>
-                            <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                              <span>{formatNumber(inv.tokensOwned)} тк</span>
-                              <ArrowRight className="h-3 w-3" />
-                              <span className="text-sm font-bold text-foreground">{formatCurrency(inv.dividendUsd)}</span>
-                            </div>
-                          </div>
-                        ))}
-                        {(s.investorDividends ?? []).length === 0 && (
-                          <p className="px-4 py-3 text-xs text-muted-foreground">Нет данных об инвесторах для этой продажи.</p>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                </CardContent>
-              </Card>
-            )}
-          </div>
-        </TabsContent>
 
       </Tabs>
 

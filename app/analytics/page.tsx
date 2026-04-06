@@ -23,16 +23,26 @@ export default function AnalyticsPage() {
   } = useDemoState()
   const { t } = useTranslation()
 
-  const navVsMarketData = herds.map((herd) => ({
-    herd: herd.name.split(' ')[0],
-    nav: platform.navPerTokenUsd,
-    market: herd.marketPriceUsd,
-  }))
+  const navVsMarketData = [
+    { day: t("days.mon", { defaultValue: "Пн" }), nav: platform.navPerTokenUsd * 0.95, market: platform.navPerTokenUsd * 1.02 },
+    { day: t("days.tue", { defaultValue: "Вт" }), nav: platform.navPerTokenUsd * 0.96, market: platform.navPerTokenUsd * 1.03 },
+    { day: t("days.wed", { defaultValue: "Ср" }), nav: platform.navPerTokenUsd * 0.98, market: platform.navPerTokenUsd * 1.01 },
+    { day: t("days.thu", { defaultValue: "Чт" }), nav: platform.navPerTokenUsd * 0.99, market: platform.navPerTokenUsd * 1.05 },
+    { day: t("days.fri", { defaultValue: "Пт" }), nav: platform.navPerTokenUsd * 1.00, market: platform.navPerTokenUsd * 1.07 },
+    { day: t("days.sat", { defaultValue: "Сб" }), nav: platform.navPerTokenUsd * 1.01, market: platform.navPerTokenUsd * 1.09 },
+    { day: t("days.sun", { defaultValue: "Вс" }), nav: platform.navPerTokenUsd * 1.02, market: platform.navPerTokenUsd * 1.10 },
+  ]
 
-  const dividendData = herds.map((herd) => ({
-    herd: herd.name.split(' ')[0],
-    distributed: herd.totalDividendsDistributedUsd,
-  }))
+  const totalDividends = herds.reduce((sum, herd) => sum + herd.totalDividendsDistributedUsd, 0)
+  const dividendData = [
+    { day: t("days.mon", { defaultValue: "Пн" }), distributed: totalDividends * 0.1 },
+    { day: t("days.tue", { defaultValue: "Вт" }), distributed: totalDividends * 0.12 },
+    { day: t("days.wed", { defaultValue: "Ср" }), distributed: totalDividends * 0.15 },
+    { day: t("days.thu", { defaultValue: "Чт" }), distributed: totalDividends * 0.13 },
+    { day: t("days.fri", { defaultValue: "Пт" }), distributed: totalDividends * 0.2 },
+    { day: t("days.sat", { defaultValue: "Сб" }), distributed: totalDividends * 0.18 },
+    { day: t("days.sun", { defaultValue: "Вс" }), distributed: totalDividends * 0.12 },
+  ]
 
   const totalValueLocked = herds.reduce((sum, herd) => sum + herd.totalValueUsd, 0)
   const totalInvestors = positions.length + 412
@@ -78,17 +88,17 @@ export default function AnalyticsPage() {
         />
       </div>
 
-      <div className="mb-8 grid gap-6 lg:grid-cols-2">
+      <div className="mb-8 grid gap-6">
         <Card>
           <CardHeader>
             <CardTitle>{t("analytics.cowchainVsMarket")}</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="h-80">
+            <div className="h-[450px]">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={navVsMarketData}>
                   <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
-                  <XAxis dataKey="herd" tick={{ fill: 'var(--color-muted-foreground)' }} />
+                  <XAxis dataKey="day" tick={{ fill: 'var(--color-muted-foreground)' }} />
                   <YAxis tick={{ fill: 'var(--color-muted-foreground)' }} />
                   <Tooltip
                     contentStyle={{
@@ -109,14 +119,14 @@ export default function AnalyticsPage() {
 
         <Card>
           <CardHeader>
-            <CardTitle>{t("analytics.divsDistributed")}</CardTitle>
+            <CardTitle>{t("analytics.divsDistributedByDay", { defaultValue: "Распр. дивиденды по дням" })}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="h-80">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={dividendData}>
                   <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
-                  <XAxis dataKey="herd" tick={{ fill: 'var(--color-muted-foreground)' }} />
+                  <XAxis dataKey="day" tick={{ fill: 'var(--color-muted-foreground)' }} />
                   <YAxis tick={{ fill: 'var(--color-muted-foreground)' }} />
                   <Tooltip
                     contentStyle={{
@@ -171,23 +181,13 @@ export default function AnalyticsPage() {
         </CardContent>
       </Card>
 
-      <div className="grid gap-6 md:grid-cols-3">
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">{t("analytics.orderBookDepth")}</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-3xl font-bold">{formatNumber(listings.reduce((sum, listing) => sum + listing.tokensAvailable, 0))}</p>
-            <p className="mt-1 text-sm text-muted-foreground">{t("analytics.tokensAvailableActive")}</p>
-          </CardContent>
-        </Card>
-
+      <div className="grid gap-6 md:grid-cols-2">
         <Card>
           <CardHeader>
             <CardTitle className="text-base">{t("analytics.dividendEvents")}</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-3xl font-bold">{formatNumber(sales.length)}</p>
+            <p className="text-3xl font-bold text-primary">{formatNumber(sales.length)}</p>
             <p className="mt-1 text-sm text-muted-foreground">{t("analytics.soldCowDistributions")}</p>
           </CardContent>
         </Card>

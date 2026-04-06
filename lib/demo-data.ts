@@ -118,7 +118,7 @@ export const initialDemoState: DemoState = {
   platform: {
     mint: PLATFORM_TOKEN_MINT,
     symbol: PLATFORM_TOKEN_SYMBOL,
-    totalSupply: 310000,
+    totalSupply: 100000,
     availableTokens: 75400,
     navPerTokenUsd: 1.106,
     marketPriceUsd: 1.08,
@@ -197,8 +197,8 @@ export const initialDemoState: DemoState = {
     {
       herdId: 'alpine-meadow',
       herdName: 'Alpine Meadow Herd',
-      tokensOwned: 6400,
-      listedTokens: 1200,
+      tokensOwned: 1000,
+      listedTokens: 200,
       averageCostUsd: 1,
       claimedDividendsUsd: 540,
       pendingDividendsUsd: 186,
@@ -206,7 +206,7 @@ export const initialDemoState: DemoState = {
     {
       herdId: 'sunrise-valley',
       herdName: 'Sunrise Valley Farm',
-      tokensOwned: 15400,
+      tokensOwned: 2500,
       listedTokens: 0,
       averageCostUsd: 1.08,
       claimedDividendsUsd: 790,
@@ -215,8 +215,8 @@ export const initialDemoState: DemoState = {
     {
       herdId: 'green-pastures',
       herdName: 'Green Pastures Co-op',
-      tokensOwned: 9200,
-      listedTokens: 800,
+      tokensOwned: 1500,
+      listedTokens: 300,
       averageCostUsd: 1.03,
       claimedDividendsUsd: 402,
       pendingDividendsUsd: 96,

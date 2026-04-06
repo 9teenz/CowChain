@@ -25,6 +25,7 @@ import type {
 import { initialDemoState, PLATFORM_TOKEN_MINT, PLATFORM_TOKEN_SYMBOL } from '@/lib/demo-data'
 
 const STORAGE_KEY = 'cowchain-demo-state'
+const STORAGE_VERSION = 2
 const LEGACY_DEMO_PLATFORM_MINT = 'PtFmCoWcHaiN111111111111111111111111111'
 
 type ActionResult = {
@@ -167,7 +168,12 @@ export function DemoStateProvider({ children }: { children: ReactNode }) {
     try {
       const raw = window.localStorage.getItem(STORAGE_KEY)
       if (raw) {
-        setState(normalizePersistedDemoState(JSON.parse(raw)))
+        const parsed = JSON.parse(raw)
+        if (parsed._version === STORAGE_VERSION) {
+          setState(normalizePersistedDemoState(parsed))
+        } else {
+          window.localStorage.removeItem(STORAGE_KEY)
+        }
       }
     } catch {
       setState(initialDemoState)
@@ -181,7 +187,7 @@ export function DemoStateProvider({ children }: { children: ReactNode }) {
       return
     }
 
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(state))
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify({ ...state, _version: STORAGE_VERSION }))
   }, [isHydrated, state])
 
   useEffect(() => {
@@ -707,15 +713,22 @@ export function DemoStateProvider({ children }: { children: ReactNode }) {
       const navAfterUsd = calculateNavAfterSale(targetHerd.navPerTokenUsd, platformTokenSupply, salePriceUsd)
       const dividendPerTokenUsd = Number((salePriceUsd / platformTokenSupply).toFixed(6))
 
-      const positions = current.positions.map((item) => ({
-        ...item,
-        pendingDividendsUsd: Number(
-          (
-            item.pendingDividendsUsd +
-            calculateUserDividend(item.tokensOwned, platformTokenSupply, salePriceUsd)
-          ).toFixed(2)
-        ),
-      }))
+      const positionsTokenSum = current.positions.reduce((sum, pos) => sum + pos.tokensOwned, 0)
+      const userTotalTokens = Math.max(
+        current.wallet.platformTokenBalance ?? positionsTokenSum,
+        positionsTokenSum
+      )
+      const totalUserDividend = calculateUserDividend(userTotalTokens, platformTokenSupply, salePriceUsd)
+
+      const positions = current.positions.map((item) => {
+        const share = positionsTokenSum > 0 ? item.tokensOwned / positionsTokenSum : 0
+        return {
+          ...item,
+          pendingDividendsUsd: Number(
+            (item.pendingDividendsUsd + totalUserDividend * share).toFixed(2)
+          ),
+        }
+      })
 
       const herds = syncMarketMetrics(
         current.herds.map((item) =>

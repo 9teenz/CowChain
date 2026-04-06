@@ -32,7 +32,7 @@ export default function PortfolioPage() {
         </p>
       </div>
 
-      <div className="mb-8 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="mb-8 grid gap-4 sm:grid-cols-3">
         <StatCard
           title={t("portfolio.platformTokenBalance")}
           value={formatNumber(portfolioSummary.userPlatformTokens)}
@@ -41,22 +41,15 @@ export default function PortfolioPage() {
           icon={Coins}
         />
         <StatCard
-          title={t("portfolio.totalHerdShares")}
-          value={t("portfolio.cows", { count: portfolioSummary.totalHerdShares.toFixed(2) })}
-          change={t("portfolio.fractionalExposure")}
-          changeType="neutral"
-          icon={Wallet}
-        />
-        <StatCard
           title={t("portfolio.cowchainValue")}
-          value={formatCurrency(portfolioSummary.currentNavValueUsd)}
+          value={formatCurrency(platform.navPerTokenUsd)}
           change={t("portfolio.cowchainValuation")}
           changeType="neutral"
           icon={DollarSign}
         />
         <StatCard
           title={t("portfolio.marketValue")}
-          value={formatCurrency(portfolioSummary.marketValueUsd)}
+          value={formatCurrency(portfolioSummary.userPlatformTokens * platform.navPerTokenUsd)}
           change={`${roi > 0 ? '+' : ''}${t('portfolio.totalReturn', { roi: roi.toFixed(2) })}`}
           changeType={roi >= 0 ? 'positive' : 'negative'}
           icon={LineChart}
@@ -109,55 +102,7 @@ export default function PortfolioPage() {
         </Card>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-[1.15fr_0.85fr]">
-        <Card className="col-span-1 overflow-hidden">
-          <CardHeader>
-            <CardTitle>{t("portfolio.yourHoldings")}</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-border text-left text-muted-foreground whitespace-nowrap">
-                    <th className="pb-3 pr-4 font-medium">{t("portfolio.thHerd")}</th>
-                    <th className="pb-3 pr-4 font-medium">{t("portfolio.thTokens")}</th>
-                    <th className="pb-3 pr-4 font-medium">{t("portfolio.thListed")}</th>
-                    <th className="pb-3 pr-4 font-medium">{t("portfolio.thShare")}</th>
-                    <th className="pb-3 pr-4 font-medium">{t("portfolio.thPendingDivs")}</th>
-                    <th className="pb-3 pr-4 font-medium">{t("portfolio.thMarketVal")}</th>
-                    <th className="pb-3 font-medium">{t("portfolio.thAction")}</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {positions.map((position) => {
-                    const herd = herds.find((item) => item.id === position.herdId)
-                    const share = herd ? (position.tokensOwned / platform.totalSupply) * 100 : 0
-                    const marketValue = herd ? position.tokensOwned * herd.marketPriceUsd : 0
-
-                    return (
-                      <tr key={position.herdId} className="border-b border-border last:border-0">
-                        <td className="py-4 pr-4 font-medium">{t(`herds.${position.herdId}.name`, position.herdName)}</td>
-                        <td className="py-4 pr-4">{formatNumber(position.tokensOwned)}</td>
-                        <td className="py-4 pr-4">{formatNumber(position.listedTokens)}</td>
-                        <td className="py-4 pr-4">{share.toFixed(2)}%</td>
-                        <td className="py-4 pr-4 text-primary">{formatCurrency(position.pendingDividendsUsd)}</td>
-                        <td className="py-4 pr-4">{formatCurrency(marketValue)}</td> 
-                        <td className="py-4">
-                          <Button variant="ghost" size="sm" asChild>
-                            <Link href={`/herd/${position.herdId}`}>
-                              {t("portfolio.viewBtn")} <ExternalLink className="ml-1 h-3 w-3" />
-                            </Link>
-                          </Button>
-                        </td>
-                      </tr>
-                    )
-                  })}
-                </tbody>
-              </table>
-            </div>
-          </CardContent>
-        </Card>
-
+      <div className="grid gap-6 lg:grid-cols-1">
         <Card className="col-span-1">
           <CardHeader>
             <CardTitle>{t("portfolio.claimQueue")}</CardTitle>
