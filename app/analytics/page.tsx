@@ -1,11 +1,12 @@
 'use client'
 
-import { Users, DollarSign, TrendingUp, Wallet, Coins, GitBranch } from 'lucide-react'
+import { Users, DollarSign, TrendingUp, Wallet, Coins, GitBranch, Layers } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { StatCard } from '@/components/stat-card'
 import { formatNumber, formatCurrency } from '@/lib/utils'
 import { useDemoState } from '@/components/demo-state-provider'
 import { useTranslation } from 'react-i18next'
+import { useState, useEffect } from 'react'
 import {
   Bar,
   BarChart,
@@ -22,6 +23,29 @@ export default function AnalyticsPage() {
     state: { platform, herds, listings, sales, positions, transactions },
   } = useDemoState()
   const { t } = useTranslation()
+
+  const [onchainHolders, setOnchainHolders] = useState<number | null>(null)
+  const [onchainSupply, setOnchainSupply] = useState<number | null>(null)
+
+  useEffect(() => {
+    fetch('/api/token-holdings')
+      .then((res) => res.json())
+      .then((data: { ok: boolean; holders?: number }) => {
+        if (data.ok && typeof data.holders === 'number') {
+          setOnchainHolders(data.holders)
+        }
+      })
+      .catch(() => {})
+
+    fetch('/api/token-supply')
+      .then((res) => res.json())
+      .then((data: { ok: boolean; amount?: number }) => {
+        if (data.ok && typeof data.amount === 'number') {
+          setOnchainSupply(data.amount)
+        }
+      })
+      .catch(() => {})
+  }, [])
 
   const navVsMarketData = [
     { day: t("days.mon", { defaultValue: "Пн" }), nav: platform.navPerTokenUsd * 0.95, market: platform.navPerTokenUsd * 1.02 },
@@ -45,7 +69,7 @@ export default function AnalyticsPage() {
   ]
 
   const totalValueLocked = herds.reduce((sum, herd) => sum + herd.totalValueUsd, 0)
-  const totalInvestors = positions.length + 412
+  const totalInvestors = onchainHolders ?? (positions.length + 412)
   const averageYield = herds.reduce((sum, herd) => sum + herd.projectedYieldPct, 0) / herds.length
 
   return (
@@ -61,30 +85,22 @@ export default function AnalyticsPage() {
         <StatCard
           title={t("analytics.totalCows")}
           value={formatNumber(herds.reduce((sum, herd) => sum + herd.herdSize, 0))}
-          change={t("analytics.acrossPools")}
-          changeType="positive"
           icon={Users}
         />
         <StatCard
           title={t("analytics.tvl")}
           value={formatCurrency(totalValueLocked)}
-          change={t("analytics.assetBackedValue")}
-          changeType="positive"
           icon={DollarSign}
         />
         <StatCard
-          title={t("analytics.avgYield")}
-          value={`${averageYield.toFixed(1)}%`}
-          change={t("analytics.acrossAllTokenPools")}
-          changeType="neutral"
-          icon={TrendingUp}
+          title={t("analytics.totalInvestors")}
+          value={onchainHolders === null ? '...' : formatNumber(totalInvestors)}
+          icon={Wallet}
         />
         <StatCard
-          title={t("analytics.totalInvestors")}
-          value={formatNumber(totalInvestors)}
-          change={t("analytics.walletsOpenPos")}
-          changeType="positive"
-          icon={Wallet}
+          title={t("analytics.totalSupply")}
+          value={onchainSupply === null ? '...' : formatNumber(onchainSupply)}
+          icon={Layers}
         />
       </div>
 
