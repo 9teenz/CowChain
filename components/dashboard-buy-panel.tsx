@@ -12,8 +12,8 @@ import { buyCowChainWithPhantom, type BuyCowChainQuote } from '@/lib/cowchain-pu
 import { calculateNavPurchaseQuote } from '@/lib/solana-contract'
 import { formatCurrency, formatNumber } from '@/lib/utils'
 
-function buildLocalQuote(herdId: string, herdName: string, tokenAmount: number, navPerTokenUsd: number): BuyCowChainQuote {
-  const preview = calculateNavPurchaseQuote({ tokenAmount, navPerTokenUsd })
+function buildLocalQuote(herdId: string, herdName: string, tokenAmount: number, navPerTokenUsd: number, solUsdRate?: number | null): BuyCowChainQuote {
+  const preview = calculateNavPurchaseQuote({ tokenAmount, navPerTokenUsd, solUsdRate: solUsdRate || undefined })
 
   return {
     ok: true,
@@ -50,13 +50,32 @@ export function DashboardBuyPanel() {
   const purchaseHerd = herds[0] ?? null
   const tokenAmountValue = Number(tokenAmount)
 
+  const [solPriceUsd, setSolPriceUsd] = useState<number | null>(null)
+  
+  useEffect(() => {
+    let isMounted = true
+    const fetchSolPrice = async () => {
+      try {
+        const response = await fetch('/api/platform/sol-price', { cache: 'no-store' })
+        const data = await response.json()
+        if (isMounted && data.ok && typeof data.priceUsd === 'number') {
+          setSolPriceUsd(data.priceUsd)
+        }
+      } catch {
+        // silently fallback
+      }
+    }
+    void fetchSolPrice()
+    return () => { isMounted = false }
+  }, [])
+
   const previewQuote = useMemo(() => {
     if (!purchaseHerd || !Number.isFinite(tokenAmountValue) || tokenAmountValue <= 0) {
       return null
     }
 
-    return serverQuote ?? buildLocalQuote(purchaseHerd.id, purchaseHerd.name, tokenAmountValue, platform.navPerTokenUsd)
-  }, [platform.navPerTokenUsd, purchaseHerd, serverQuote, tokenAmountValue])
+    return serverQuote ?? buildLocalQuote(purchaseHerd.id, purchaseHerd.name, tokenAmountValue, platform.navPerTokenUsd, solPriceUsd)
+  }, [platform.navPerTokenUsd, purchaseHerd, serverQuote, tokenAmountValue, solPriceUsd])
 
   useEffect(() => {
     if (!purchaseHerd || !Number.isFinite(tokenAmountValue) || tokenAmountValue <= 0) {
@@ -126,10 +145,28 @@ export function DashboardBuyPanel() {
         setFeedback(null)
 
         try {
+          setFeedback('Please confirm the SOL transaction in Phantom...')
+
           const receipt = await buyCowChainWithPhantom({
             quote: previewQuote,
             expectedWalletAddress: wallet.walletAddress || undefined,
           })
+
+          setFeedback('SOL sent. Minting tokens...')
+
+          const mintRes = await fetch('/api/buy-cowchain/mint', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              recipientAddress: receipt.walletAddress,
+              tokenAmount: previewQuote.tokenAmount,
+              herdName: previewQuote.herdName,
+            }),
+          })
+          const mintData = await mintRes.json()
+          if (!mintData.ok) {
+            throw new Error(mintData.error || 'Failed to mint tokens.')
+          }
 
           const localResult = buyAtNav(purchaseHerd.id, previewQuote.tokenAmount, 'SOL')
           const txPreview = `${receipt.signature.slice(0, 8)}...${receipt.signature.slice(-8)}`

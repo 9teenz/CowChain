@@ -5,6 +5,20 @@ import { calculateNavPurchaseQuote, SOL_USD_RATE } from '@/lib/solana-contract'
 
 type Cluster = 'mainnet-beta' | 'devnet' | 'testnet'
 
+async function fetchLiveSolPrice(): Promise<number | null> {
+  try {
+    const controller = new AbortController()
+    const timeout = setTimeout(() => controller.abort(), 6000)
+    const res = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=solana&vs_currencies=usd', { signal: controller.signal, cache: 'no-store' })
+    clearTimeout(timeout)
+    if (!res.ok) return null
+    const data = await res.json() as { solana?: { usd?: number } }
+    return data.solana?.usd ?? null
+  } catch {
+    return null
+  }
+}
+
 type BuyCowChainRequest = {
   herdId?: string
   tokenAmount?: number
@@ -52,9 +66,16 @@ export async function POST(request: Request) {
   const tokenAmount = Number(payload.tokenAmount)
   const slippageBps = Number.isFinite(payload.slippageBps) ? Math.max(25, Math.min(1_500, Number(payload.slippageBps))) : 150
   const cluster = payload.cluster && isCluster(payload.cluster) ? payload.cluster : 'devnet'
+  
+  let solPriceContext = Number(process.env.NEXT_PUBLIC_SOL_USD_RATE || SOL_USD_RATE)
+  const livePrice = await fetchLiveSolPrice()
+  if (livePrice) {
+    solPriceContext = livePrice
+  }
+
   const solUsdRate = Number.isFinite(payload.solUsdRate) && Number(payload.solUsdRate) > 0
     ? Number(payload.solUsdRate)
-    : Number(process.env.NEXT_PUBLIC_SOL_USD_RATE || SOL_USD_RATE)
+    : solPriceContext
 
   if (!herdId) {
     return NextResponse.json<BuyCowChainFailure>({ ok: false, error: 'Missing herd id.' }, { status: 400 })

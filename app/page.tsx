@@ -42,9 +42,24 @@ export default function DashboardPage() {
   const [buyAmount, setBuyAmount] = useState('')
   const [isBuying, setIsBuying] = useState(false)
   const [buyDialogOpen, setBuyDialogOpen] = useState(false)
+  const [solPriceUsd, setSolPriceUsd] = useState<number | null>(null)
 
   useEffect(() => {
     let isMounted = true
+
+    const fetchSolPrice = async () => {
+      try {
+        const response = await fetch('/api/platform/sol-price', { cache: 'no-store' })
+        const data = await response.json()
+        if (isMounted && data.ok && typeof data.priceUsd === 'number') {
+          setSolPriceUsd(data.priceUsd)
+        }
+      } catch {
+        // silently fallback
+      }
+    }
+    
+    void fetchSolPrice()
 
     const fetchTokenSupply = async () => {
       setTokenSupplyLabel('Loading live CowChain supply...')
@@ -102,7 +117,7 @@ export default function DashboardPage() {
   const buyPreview = (() => {
     const amt = parseFloat(buyAmount)
     if (!amt || amt <= 0 || !Number.isFinite(amt)) return null
-    const q = calculateNavPurchaseQuote({ tokenAmount: amt, navPerTokenUsd: platform.navPerTokenUsd })
+    const q = calculateNavPurchaseQuote({ tokenAmount: amt, navPerTokenUsd: platform.navPerTokenUsd, solUsdRate: solPriceUsd || undefined })
     return q
   })()
 
@@ -127,7 +142,7 @@ export default function DashboardPage() {
         tokenAmount: amount,
         navPerTokenUsd: platform.navPerTokenUsd,
         usdTotal: amount * platform.navPerTokenUsd,
-        solUsdRate: buyPreview?.solUsdRate ?? 155,
+        solUsdRate: buyPreview?.solUsdRate ?? solPriceUsd ?? 155,
         solTotal: buyPreview?.solTotal ?? 0,
         lamports: buyPreview?.lamports ?? 0,
         maxLamports: buyPreview?.lamports ?? 0,
@@ -136,12 +151,29 @@ export default function DashboardPage() {
         expiresAt: new Date(Date.now() + 2 * 60 * 1000).toISOString(),
       }
 
-      toast({ title: 'Подтвердите в Phantom', description: 'Подпишите транзакцию покупки токенов.' })
+      toast({ title: 'Подтвердите в Phantom', description: 'Отправка SOL на покупку токенов...' })
 
       const receipt = await buyCowChainWithPhantom({
         quote,
         expectedWalletAddress: connectedWalletAddress || undefined,
       })
+
+      toast({ title: 'SOL отправлен', description: 'Зачисление токенов на кошелек...' })
+
+      const mintRes = await fetch('/api/buy-cowchain/mint', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          recipientAddress: receipt.walletAddress,
+          tokenAmount: amount,
+          herdName: quote.herdName,
+        }),
+      })
+
+      const mintData = await mintRes.json();
+      if (!mintData.ok) {
+        throw new Error(mintData.error || 'Не удалось зачислить токены.')
+      }
 
       const localResult = buyAtNav(purchaseHerd.id, amount, 'SOL')
       const txPreview = `${receipt.signature.slice(0, 8)}…${receipt.signature.slice(-8)}`
@@ -311,12 +343,12 @@ export default function DashboardPage() {
                       variant="outline"
                       disabled={!wallet.connected || portfolioSummary.userPlatformTokens <= 0}
                     >
-                      Продать токены
+                      {t('marketplace.sellTokens')}
                     </Button>
                   </DialogTrigger>
                   <DialogContent>
                     <DialogHeader>
-                      <DialogTitle>Продать {platform.symbol}</DialogTitle>
+                      <DialogTitle>{t('marketplace.sellTokens')} {platform.symbol}</DialogTitle>
                       <DialogDescription>
                         Токены будут списаны с Phantom кошелька, а SOL придёт обратно.
                         Цена: {formatCurrency(platform.navPerTokenUsd)} за токен (NAV).
@@ -347,7 +379,7 @@ export default function DashboardPage() {
                         onClick={handleSellTokens}
                         disabled={isSelling || !sellAmount || isNaN(parseFloat(sellAmount)) || parseFloat(sellAmount) <= 0}
                       >
-                        {isSelling ? 'Продажа...' : 'Продать'}
+                        {isSelling ? t('farmer.modalSellBtn') + '...' : t('farmer.modalSellBtn')}
                       </Button>
                     </DialogFooter>
                   </DialogContent>

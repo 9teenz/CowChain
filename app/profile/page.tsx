@@ -440,12 +440,12 @@ export default function ProfilePage() {
                       disabled={!wallet.connected || !displayedCowChainBalance}
                     >
                       <Send className="mr-2 h-4 w-4" />
-                      Продать токены
+                      {t('marketplace.sellTokens')}
                     </Button>
                   </DialogTrigger>
                   <DialogContent>
                     <DialogHeader>
-                      <DialogTitle>Продажа {platform.symbol}</DialogTitle>
+                      <DialogTitle>{t('marketplace.sellTokens')} {platform.symbol}</DialogTitle>
                       <DialogDescription>
                         Токены будут списаны, а SOL отправлен на ваш кошелёк: {connectedWalletAddress ? shortenWallet(connectedWalletAddress) : '—'}
                       </DialogDescription>
@@ -476,7 +476,7 @@ export default function ProfilePage() {
                         Отмена
                       </Button>
                       <Button onClick={handleWithdrawTokens} disabled={isWithdrawing || !withdrawAmount}>
-                        {isWithdrawing ? 'Продажа...' : 'Продать'}
+                        {isWithdrawing ? t('farmer.modalSellBtn') + '...' : t('farmer.modalSellBtn')}
                       </Button>
                     </DialogFooter>
                   </DialogContent>
