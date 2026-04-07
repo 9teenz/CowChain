@@ -48,6 +48,7 @@ interface DemoStateContextValue {
   listTokens: (herdId: string, tokenAmount: number, pricePerTokenUsd: number) => ActionResult
   buyListing: (listingId: string, tokenAmount: number) => ActionResult
   claimDividends: (currency: BuyCurrency) => Promise<ActionResult>
+  withdrawTokens: (amount: number) => Promise<ActionResult>
   simulateCowSale: (herdId: string, salePriceUsd: number, currency: BuyCurrency) => ActionResult
   addCowsToHerd: (herdId: string, count: number, costPerCowUsd: number) => ActionResult
   addFarm: (name: string, location: string, herdSize: number, costPerCowUsd: number) => ActionResult
@@ -729,6 +730,106 @@ export function DemoStateProvider({ children }: { children: ReactNode }) {
     }
   }
 
+  const withdrawTokens = async (amount: number): Promise<ActionResult> => {
+    if (!state.wallet.connected) {
+      return { ok: false, message: 'Подключите кошелёк перед продажей токенов.' }
+    }
+
+    const walletAddress = state.wallet.walletAddress?.trim()
+    if (!walletAddress) {
+      return { ok: false, message: 'Адрес кошелька не найден.' }
+    }
+
+    if (amount <= 0) {
+      return { ok: false, message: 'Количество должно быть положительным.' }
+    }
+
+    const totalTokens = state.positions.reduce((sum, p) => sum + p.tokensOwned, 0)
+    if (amount > totalTokens) {
+      return { ok: false, message: `Недостаточно токенов. У вас ${totalTokens} ${state.platform.symbol}.` }
+    }
+
+    try {
+      // 1. Fetch real SOL price
+      const priceRes = await fetch('/api/platform/sol-price', { cache: 'no-store' })
+      const priceData = (await priceRes.json()) as { ok?: boolean; priceUsd?: number }
+      if (!priceRes.ok || !priceData.ok || !priceData.priceUsd) {
+        return { ok: false, message: 'Не удалось получить текущий курс SOL.' }
+      }
+      const solPriceUsd = priceData.priceUsd
+
+      // 2. Send SOL to user (like claimDividends)
+      const res = await fetch('/api/wallet/withdraw-tokens', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          recipientAddress: walletAddress,
+          tokenAmount: amount,
+          solPriceUsd,
+          navPerTokenUsd: state.platform.navPerTokenUsd,
+        }),
+      })
+
+      const data = (await res.json()) as {
+        ok?: boolean
+        txId?: string
+        tokenAmount?: number
+        amountUsd?: number
+        amountSol?: number
+        solPriceUsd?: number
+        error?: string
+      }
+
+      if (!res.ok || !data.ok || !data.txId) {
+        return { ok: false, message: data.error || 'Продажа токенов не удалась.' }
+      }
+
+      const txId = data.txId
+      const amountSol = data.amountSol ?? 0
+      const amountUsd = data.amountUsd ?? 0
+
+      // 3. Update local state: deduct tokens, add SOL
+      setState((current) => {
+        let remaining = amount
+        const positions = current.positions.map((pos) => {
+          if (remaining <= 0) return pos
+          const deduct = Math.min(pos.tokensOwned, remaining)
+          remaining -= deduct
+          return { ...pos, tokensOwned: pos.tokensOwned - deduct }
+        })
+
+        return pushTransaction(
+          {
+            ...current,
+            wallet: {
+              ...current.wallet,
+              solBalance: Number((current.wallet.solBalance + amountSol).toFixed(6)),
+            },
+            positions,
+          },
+          {
+            id: `txn-${txId}`,
+            kind: 'withdraw',
+            label: buildActionLabel('withdraw'),
+            amountUsd: Number(amountUsd.toFixed(2)),
+            currency: 'SOL',
+            txId,
+            timestamp: new Date().toISOString(),
+          }
+        )
+      })
+
+      return {
+        ok: true,
+        message: `Продано ${amount} ${state.platform.symbol} → ${amountSol.toFixed(6)} SOL ($${amountUsd.toFixed(2)}) отправлено на ${walletAddress.slice(0, 6)}... (1 SOL = $${solPriceUsd.toFixed(2)})`,
+        txId,
+      }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Продажа токенов не удалась.'
+      return { ok: false, message }
+    }
+  }
+
   const simulateCowSale = (herdId: string, salePriceUsd: number, currency: BuyCurrency): ActionResult => {
     if (salePriceUsd <= 0) {
       return { ok: false, message: 'Sale price must be positive.' }
@@ -1132,6 +1233,7 @@ export function DemoStateProvider({ children }: { children: ReactNode }) {
       listTokens,
       buyListing,
       claimDividends,
+      withdrawTokens,
       simulateCowSale,
       addCowsToHerd,
       addFarm,

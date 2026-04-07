@@ -2,14 +2,18 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { DashboardBuyPanel } from '@/components/dashboard-buy-panel'
 import { HerdCard } from '@/components/herd-card'
 import { StatCard } from '@/components/stat-card'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
+import { Input } from '@/components/ui/input'
 import { useDemoState } from '@/components/demo-state-provider'
 import { formatCurrency, formatNumber } from '@/lib/utils'
 import { shortenWallet } from '@/lib/solana-contract'
+import { sellCowChainWithPhantom } from '@/lib/cowchain-sell'
+import { buyCowChainWithPhantom, type BuyCowChainQuote } from '@/lib/cowchain-purchase'
+import { calculateNavPurchaseQuote } from '@/lib/solana-contract'
 import { Wallet, TrendingUp, Coins, Users, Sparkles, Construction } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { toast } from '@/hooks/use-toast'
@@ -27,9 +31,17 @@ export default function DashboardPage() {
     state: { herds, sales, wallet, platform },
     portfolioSummary,
     claimDividends,
+    withdrawTokens,
+    buyAtNav,
   } = useDemoState()
   const [liveTotalTokens, setLiveTotalTokens] = useState(platform.totalSupply)
   const [tokenSupplyLabel, setTokenSupplyLabel] = useState('Loading live CowChain supply...')
+  const [sellAmount, setSellAmount] = useState('')
+  const [isSelling, setIsSelling] = useState(false)
+  const [sellDialogOpen, setSellDialogOpen] = useState(false)
+  const [buyAmount, setBuyAmount] = useState('')
+  const [isBuying, setIsBuying] = useState(false)
+  const [buyDialogOpen, setBuyDialogOpen] = useState(false)
 
   useEffect(() => {
     let isMounted = true
@@ -84,6 +96,108 @@ export default function DashboardPage() {
   const totalTokens = liveTotalTokens
   const averageNav = platform.navPerTokenUsd
   const latestSales = sales.slice(0, 3)
+  const connectedWalletAddress = wallet.connected ? wallet.walletAddress : ''
+  const purchaseHerd = herds[0] ?? null
+
+  const buyPreview = (() => {
+    const amt = parseFloat(buyAmount)
+    if (!amt || amt <= 0 || !Number.isFinite(amt)) return null
+    const q = calculateNavPurchaseQuote({ tokenAmount: amt, navPerTokenUsd: platform.navPerTokenUsd })
+    return q
+  })()
+
+  const handleBuyTokens = async () => {
+    const amount = parseFloat(buyAmount)
+    if (isNaN(amount) || amount <= 0) {
+      toast({ title: 'Ошибка', description: 'Введите корректное количество токенов.', variant: 'destructive' })
+      return
+    }
+    if (!purchaseHerd) {
+      toast({ title: 'Ошибка', description: 'Нет доступных пулов для покупки.', variant: 'destructive' })
+      return
+    }
+
+    setIsBuying(true)
+    try {
+      const quote: BuyCowChainQuote = {
+        ok: true,
+        herdId: purchaseHerd.id,
+        herdName: purchaseHerd.name,
+        symbol: platform.symbol,
+        tokenAmount: amount,
+        navPerTokenUsd: platform.navPerTokenUsd,
+        usdTotal: amount * platform.navPerTokenUsd,
+        solUsdRate: buyPreview?.solUsdRate ?? 155,
+        solTotal: buyPreview?.solTotal ?? 0,
+        lamports: buyPreview?.lamports ?? 0,
+        maxLamports: buyPreview?.lamports ?? 0,
+        slippageBps: 150,
+        cluster: 'devnet',
+        expiresAt: new Date(Date.now() + 2 * 60 * 1000).toISOString(),
+      }
+
+      toast({ title: 'Подтвердите в Phantom', description: 'Подпишите транзакцию покупки токенов.' })
+
+      const receipt = await buyCowChainWithPhantom({
+        quote,
+        expectedWalletAddress: connectedWalletAddress || undefined,
+      })
+
+      const localResult = buyAtNav(purchaseHerd.id, amount, 'SOL')
+      const txPreview = `${receipt.signature.slice(0, 8)}…${receipt.signature.slice(-8)}`
+
+      toast({
+        title: 'Токены куплены',
+        description: localResult.ok
+          ? `Куплено ${amount} ${platform.symbol}. Tx: ${txPreview}`
+          : `Tx: ${txPreview} подтверждён.`,
+      })
+      setBuyAmount('')
+      setBuyDialogOpen(false)
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : 'Не удалось завершить покупку.'
+      toast({ title: 'Ошибка', description: msg, variant: 'destructive' })
+    } finally {
+      setIsBuying(false)
+    }
+  }
+
+  const handleSellTokens = async () => {
+    const amount = parseFloat(sellAmount)
+    if (isNaN(amount) || amount <= 0) {
+      toast({ title: 'Ошибка', description: 'Введите корректное количество токенов.', variant: 'destructive' })
+      return
+    }
+
+    setIsSelling(true)
+    try {
+      toast({ title: 'Подтвердите в Phantom', description: 'Подпишите транзакцию перевода токенов.' })
+
+      const sellResult = await sellCowChainWithPhantom({
+        tokenAmount: amount,
+        cluster: 'devnet',
+        expectedWalletAddress: connectedWalletAddress || undefined,
+      })
+
+      toast({ title: 'Токены отправлены', description: `Tx: ${sellResult.signature.slice(0, 8)}… Ожидание SOL…` })
+
+      const result = await withdrawTokens(amount)
+      toast({
+        title: result.ok ? 'Токены проданы' : 'Ошибка',
+        description: result.message,
+        variant: result.ok ? 'default' : 'destructive',
+      })
+      if (result.ok) {
+        setSellAmount('')
+        setSellDialogOpen(false)
+      }
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : 'Не удалось завершить продажу.'
+      toast({ title: 'Ошибка', description: msg, variant: 'destructive' })
+    } finally {
+      setIsSelling(false)
+    }
+  }
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
@@ -139,13 +253,105 @@ export default function DashboardPage() {
                 <p className="mt-2 text-2xl font-bold text-white">{wallet.connected ? formatNumber(portfolioSummary.userPlatformTokens) : '—'}</p>
                 <p className="mt-1 text-xs text-white/50">{wallet.connected ? t('dashboard.cowchainTokenPrice', 'CowChain tokens') : t('dashboard.connectWalletToView')}</p>
               </div>
-              <div className="flex gap-2">
-                <Button
-                  className="flex-1 bg-white text-slate-950 hover:bg-white/90"
-                  asChild
-                >
-                  <Link href="#buy-cowchain">{t('dashboard.buyCowchainToken')}</Link>
-                </Button>
+              <div className="flex flex-wrap gap-2">
+                <Dialog open={buyDialogOpen} onOpenChange={setBuyDialogOpen}>
+                  <DialogTrigger asChild>
+                    <Button
+                      className="flex-1 bg-white text-slate-950 hover:bg-white/90"
+                      disabled={!wallet.connected}
+                    >
+                      {t('dashboard.buyCowchainToken')}
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>Купить {platform.symbol}</DialogTitle>
+                      <DialogDescription>
+                        SOL будет списан через Phantom, токены поступят на кошелёк.
+                        Цена: {formatCurrency(platform.navPerTokenUsd)} за токен (NAV).
+                      </DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-3 py-2">
+                      <Input
+                        type="number"
+                        min="1"
+                        step="1"
+                        placeholder="Количество токенов"
+                        value={buyAmount}
+                        onChange={(e) => setBuyAmount(e.target.value)}
+                      />
+                      {buyPreview && (
+                        <div className="grid grid-cols-2 gap-2 rounded-xl border p-3 text-sm">
+                          <div>
+                            <p className="text-xs text-muted-foreground">USD</p>
+                            <p className="font-semibold">{formatCurrency(buyPreview.usdTotal)}</p>
+                          </div>
+                          <div>
+                            <p className="text-xs text-muted-foreground">SOL</p>
+                            <p className="font-semibold">{buyPreview.solTotal.toFixed(4)} SOL</p>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                    <DialogFooter>
+                      <Button variant="outline" onClick={() => setBuyDialogOpen(false)}>Отмена</Button>
+                      <Button
+                        onClick={handleBuyTokens}
+                        disabled={isBuying || !buyAmount || isNaN(parseFloat(buyAmount)) || parseFloat(buyAmount) <= 0}
+                      >
+                        {isBuying ? 'Покупка...' : 'Купить'}
+                      </Button>
+                    </DialogFooter>
+                  </DialogContent>
+                </Dialog>
+                <Dialog open={sellDialogOpen} onOpenChange={setSellDialogOpen}>
+                  <DialogTrigger asChild>
+                    <Button
+                      className="flex-1 border-red-400/30 bg-red-500/20 text-white hover:bg-red-500/30"
+                      variant="outline"
+                      disabled={!wallet.connected || portfolioSummary.userPlatformTokens <= 0}
+                    >
+                      Продать токены
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>Продать {platform.symbol}</DialogTitle>
+                      <DialogDescription>
+                        Токены будут списаны с Phantom кошелька, а SOL придёт обратно.
+                        Цена: {formatCurrency(platform.navPerTokenUsd)} за токен (NAV).
+                      </DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-3 py-2">
+                      <Input
+                        type="number"
+                        min="0"
+                        step="1"
+                        placeholder="Количество токенов"
+                        value={sellAmount}
+                        onChange={(e) => setSellAmount(e.target.value)}
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        Доступно: {formatNumber(portfolioSummary.userPlatformTokens)} {platform.symbol}
+                      </p>
+                      {sellAmount && !isNaN(parseFloat(sellAmount)) && parseFloat(sellAmount) > 0 && (
+                        <p className="text-sm font-medium text-primary">
+                          ≈ ${(parseFloat(sellAmount) * platform.navPerTokenUsd).toFixed(2)} USD
+                        </p>
+                      )}
+                    </div>
+                    <DialogFooter>
+                      <Button variant="outline" onClick={() => setSellDialogOpen(false)}>Отмена</Button>
+                      <Button
+                        variant="destructive"
+                        onClick={handleSellTokens}
+                        disabled={isSelling || !sellAmount || isNaN(parseFloat(sellAmount)) || parseFloat(sellAmount) <= 0}
+                      >
+                        {isSelling ? 'Продажа...' : 'Продать'}
+                      </Button>
+                    </DialogFooter>
+                  </DialogContent>
+                </Dialog>
                 <Button
                   className="flex-1 bg-primary text-primary-foreground"
                   onClick={async () => {
@@ -184,10 +390,6 @@ export default function DashboardPage() {
           changeType="positive"
           icon={TrendingUp}
         />
-      </div>
-
-      <div id="buy-cowchain" className="mt-10">
-        <DashboardBuyPanel />
       </div>
 
       <div className="mt-10 grid gap-6 lg:grid-cols-[1.3fr_0.9fr]">

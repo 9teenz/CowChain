@@ -78,7 +78,7 @@ export interface CowSaleEvent {
 
 export interface TransactionItem {
   id: string
-  kind: 'nav-buy' | 'market-buy' | 'listing' | 'claim' | 'cow-sale'
+  kind: 'nav-buy' | 'market-buy' | 'listing' | 'claim' | 'cow-sale' | 'withdraw'
   label: string
   amountUsd: number
   currency: SettlementCurrency

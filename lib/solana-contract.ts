@@ -113,7 +113,7 @@ export function projectedMarketValue(tokensOwned: number, pricePerTokenUsd: numb
   return round(tokensOwned * pricePerTokenUsd, 2)
 }
 
-export function buildActionLabel(kind: 'nav' | 'market' | 'claim' | 'sale', herdName?: string) {
+export function buildActionLabel(kind: 'nav' | 'market' | 'claim' | 'sale' | 'withdraw', herdName?: string) {
   if (kind === 'nav') {
     return `Minted CowChain tokens for ${herdName}`
   }
@@ -124,6 +124,10 @@ export function buildActionLabel(kind: 'nav' | 'market' | 'claim' | 'sale', herd
 
   if (kind === 'claim') {
     return 'Claimed pending dividends'
+  }
+
+  if (kind === 'withdraw') {
+    return 'Sold CowChain tokens for SOL'
   }
 
   return `Registered sold cow event for ${herdName}`

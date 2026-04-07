@@ -4,12 +4,15 @@ import Link from 'next/link'
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { signOut, useSession } from 'next-auth/react'
-import { Award, Calendar, Check, Coins, Copy, PieChart, RefreshCw, ShieldCheck, Unlink, Wallet } from 'lucide-react'
+import { Award, Calendar, Check, Coins, Copy, PieChart, RefreshCw, Send, ShieldCheck, Unlink, Wallet } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { StatCard } from '@/components/stat-card'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
+import { Input } from '@/components/ui/input'
 import { useDemoState } from '@/components/demo-state-provider'
+import { sellCowChainWithPhantom } from '@/lib/cowchain-sell'
 import { useAuthGuard } from '@/hooks/use-auth-guard'
 import { shortenWallet } from '@/lib/solana-contract'
 import { formatCurrency, formatNumber, cn } from '@/lib/utils'
@@ -36,12 +39,16 @@ export default function ProfilePage() {
   const [solBalanceStatus, setSolBalanceStatus] = useState<string>(t('profile.liveBalance'))
   const [isTokenBalanceLoading, setIsTokenBalanceLoading] = useState(false)
   const [tokenBalanceStatus, setTokenBalanceStatus] = useState<string>('Live CowChain token balance')
-  const [kindFilter, setKindFilter] = useState<'all' | 'nav-buy' | 'market-buy' | 'listing' | 'claim' | 'cow-sale'>('all')
+  const [kindFilter, setKindFilter] = useState<'all' | 'nav-buy' | 'market-buy' | 'listing' | 'claim' | 'cow-sale' | 'withdraw'>('all')
   const [currencyFilter, setCurrencyFilter] = useState<'all' | 'SOL' | 'USDC'>('all')
+  const [withdrawAmount, setWithdrawAmount] = useState('')
+  const [isWithdrawing, setIsWithdrawing] = useState(false)
+  const [withdrawDialogOpen, setWithdrawDialogOpen] = useState(false)
   const {
     state: { wallet, positions, transactions, platform },
     portfolioSummary,
     claimDividends,
+    withdrawTokens,
     disconnectWallet,
     setPlatformTokenBalance,
   } = useDemoState()
@@ -246,6 +253,47 @@ export default function ProfilePage() {
     }
   }
 
+  const handleWithdrawTokens = async () => {
+    const amount = parseFloat(withdrawAmount)
+    if (isNaN(amount) || amount <= 0) {
+      toast({ title: 'Ошибка', description: 'Введите корректное количество токенов.', variant: 'destructive' })
+      return
+    }
+
+    setIsWithdrawing(true)
+    try {
+      // Step 1: Transfer tokens from user to treasury via Phantom
+      toast({ title: 'Подтвердите в Phantom', description: 'Подпишите транзакцию перевода токенов.' })
+
+      const sellResult = await sellCowChainWithPhantom({
+        tokenAmount: amount,
+        cluster: 'devnet',
+        expectedWalletAddress: connectedWalletAddress || undefined,
+      })
+
+      toast({ title: 'Токены отправлены', description: `Tx: ${sellResult.signature.slice(0, 8)}… Ожидание SOL…` })
+
+      // Step 2: Server sends SOL back to user
+      const result = await withdrawTokens(amount)
+      toast({
+        title: result.ok ? 'Токены проданы' : 'Ошибка',
+        description: result.message,
+        variant: result.ok ? 'default' : 'destructive',
+      })
+      if (result.ok) {
+        setWithdrawAmount('')
+        setWithdrawDialogOpen(false)
+        void fetchPlatformTokenBalance()
+        void fetchSolBalance()
+      }
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : 'Не удалось завершить продажу.'
+      toast({ title: 'Ошибка', description: msg, variant: 'destructive' })
+    } finally {
+      setIsWithdrawing(false)
+    }
+  }
+
   const filteredTransactions = transactions.filter((transaction) => {
     const matchesKind = kindFilter === 'all' || transaction.kind === kindFilter
     const matchesCurrency = currencyFilter === 'all' || transaction.currency === currencyFilter
@@ -384,6 +432,55 @@ export default function ProfilePage() {
                   <RefreshCw className="mr-2 h-4 w-4" />
                   {isTokenBalanceLoading ? 'Refreshing...' : 'Refresh'}
                 </Button>
+                <Dialog open={withdrawDialogOpen} onOpenChange={setWithdrawDialogOpen}>
+                  <DialogTrigger asChild>
+                    <Button
+                      size="sm"
+                      variant="default"
+                      disabled={!wallet.connected || !displayedCowChainBalance}
+                    >
+                      <Send className="mr-2 h-4 w-4" />
+                      Продать токены
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>Продажа {platform.symbol}</DialogTitle>
+                      <DialogDescription>
+                        Токены будут списаны, а SOL отправлен на ваш кошелёк: {connectedWalletAddress ? shortenWallet(connectedWalletAddress) : '—'}
+                      </DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-4 py-4">
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium">Количество {platform.symbol}</label>
+                        <Input
+                          type="number"
+                          min="0"
+                          step="any"
+                          placeholder={`Макс: ${formatNumber(portfolioSummary.userPlatformTokens)}`}
+                          value={withdrawAmount}
+                          onChange={(e) => setWithdrawAmount(e.target.value)}
+                        />
+                        <p className="text-xs text-muted-foreground">
+                          Доступно: {formatNumber(portfolioSummary.userPlatformTokens)} {platform.symbol}
+                        </p>
+                        {withdrawAmount && !isNaN(parseFloat(withdrawAmount)) && parseFloat(withdrawAmount) > 0 && (
+                          <p className="text-sm font-medium text-primary">
+                            ≈ ${(parseFloat(withdrawAmount) * platform.navPerTokenUsd).toFixed(2)} USD
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                    <DialogFooter>
+                      <Button variant="outline" onClick={() => setWithdrawDialogOpen(false)}>
+                        Отмена
+                      </Button>
+                      <Button onClick={handleWithdrawTokens} disabled={isWithdrawing || !withdrawAmount}>
+                        {isWithdrawing ? 'Продажа...' : 'Продать'}
+                      </Button>
+                    </DialogFooter>
+                  </DialogContent>
+                </Dialog>
                 <p className="text-xs text-muted-foreground">{tokenBalanceStatus}</p>
                 <p className="text-xs text-muted-foreground">Mint: {platform.mint ? shortenWallet(platform.mint) : 'not set'}</p>
               </div>
@@ -427,6 +524,7 @@ export default function ProfilePage() {
               <option value="listing">{t('profile.filterListing')}</option>
               <option value="claim">{t('profile.filterClaim')}</option>
               <option value="cow-sale">{t('profile.filterCowSale')}</option>
+              <option value="withdraw">Вывод токенов</option>
             </select>
 
             <select
