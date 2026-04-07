@@ -2,36 +2,169 @@
 
 # CowChain
 
-## Стек аутентификации
+CowChain — это `Next.js 16` приложение для работы с токенизированными фермами, авторизацией пользователей, привязкой кошелька и devnet-интеграцией с Solana / Phantom
 
-- NextAuth (JWT-сессия в httpOnly-куках)
-- Prisma + SQLite для локальной разработки
-- OAuth-провайдеры: Google и GitHub
-- Верификация email через SMTP (Ethereal)
-- Вход только по кошельку и эндпоинт привязки кошелька
+---
 
-## Локальная установка
+## Что есть в проекте
 
-1. Установить зависимости.
-2. Создать файл переменных окружения из примера.
-3. Запустить генерацию Prisma и миграцию.
-4. Запустить сервер разработки.
+- `Next.js 16` + `React 19`
+- `NextAuth` с JWT-сессиями
+- `Prisma + SQLite` для локальной разработки
+- email-верификация через SMTP, с fallback на `Ethereal`
+- логин по email/паролю и по кошельку
+- SPL-token админка: `/admin/token`
+- devnet buy/sell flow
+- unit / API / component / e2e тесты
+
+---
+
+## Требования для локального запуска
+
+Для запуска проекта желательно иметь:
+
+- `Node.js 20+` (лучше `20 LTS` или `22 LTS`)
+- `npm 10+`
+- браузер с установленным кошельком `Phantom`
+- `Playwright` браузеры - только если будете запускать e2e тесты
+
+> Отдельно устанавливать SQLite не нужно — база создаётся Prisma локально
+
+---
+
+## Быстрый старт
+
+### 1. Установить зависимости
 
 ```bash
 npm install
-npm run prisma:generate
-npm run prisma:migrate
-npm run dev
+```
+
+### 2. Проверить готовый `.env.local`
+
+В репозитории уже используется готовый `.env.local`, чтобы проект можно было быстрее проверить
+
+При необходимости просто убедитесь, что в нём актуальны основные значения:
+
+```env
+DATABASE_URL="file:./dev.db"
+NEXTAUTH_URL="http://localhost:3000"
+NEXTAUTH_SECRET="your-secret"
+AUTH_SECRET="your-secret"
 ```
 
 
+### 4. Сгенерировать Prisma client и применить миграции
 
-## OAuth-коллбэки
+```bash
+npm run prisma:generate
+npm run prisma:migrate
+```
 
-- URL коллбэка Google: `http://localhost:3000/api/auth/callback/google`
-- URL коллбэка GitHub: `http://localhost:3000/api/auth/callback/github`
+Если `Prisma` сообщает, что не найден `DATABASE_URL`, выполните миграцию:
 
-## Реализованные эндпоинты аутентификации
+```powershell
+$env:DATABASE_URL="file:./dev.db"
+npm run prisma:migrate
+```
+
+### 5. Запустить dev-сервер
+
+```bash
+npm run dev
+```
+
+После запуска откройте:
+
+- `http://localhost:3000`
+
+---
+
+## Переменные окружения
+
+### Обязательные для локальной разработки
+
+| Переменная | Назначение | Пример |
+|---|---|---|
+| `DATABASE_URL` | SQLite база для Prisma | `file:./dev.db` |
+| `NEXTAUTH_URL` | базовый URL приложения | `http://localhost:3000` |
+| `NEXTAUTH_SECRET` | секрет NextAuth | `long-random-string` |
+| `AUTH_SECRET` | совместимость с auth-конфигом | `long-random-string` |
+
+### Опциональные для OAuth
+
+| Переменная |
+|---|
+| `GOOGLE_CLIENT_ID` |
+| `GOOGLE_CLIENT_SECRET` |
+| `GITHUB_ID` |
+| `GITHUB_SECRET` |
+
+Если не настроить OAuth, базовый локальный запуск всё равно возможен, но вход через Google/GitHub работать не будет
+
+### Опциональные для email
+
+| Переменная | Примечание |
+|---|---|
+| `ETHEREAL_SMTP_HOST` | по умолчанию `smtp.ethereal.email` |
+| `ETHEREAL_SMTP_PORT` | по умолчанию `587` |
+| `ETHEREAL_SMTP_USER` | можно не задавать |
+| `ETHEREAL_SMTP_PASS` | можно не задавать |
+| `EMAIL_FROM` | адрес отправителя |
+
+> Если SMTP-переменные не заданы, приложение автоматически создаёт тестовый `Ethereal` и выводит preview URL в терминал.
+
+### Опциональные для Solana / Phantom / админки
+
+| Переменная | Для чего нужна |
+|---|---|
+| `SOLANA_CLUSTER` | кластер (`devnet`) |
+| `SOLANA_RPC_URL` | RPC для серверных операций |
+| `NEXT_PUBLIC_SOLANA_RPC_URL` | RPC для клиентских запросов |
+| `NEXT_PUBLIC_COWCHAIN_PROGRAM_ID` | адрес deployed Solana program |
+| `NEXT_PUBLIC_COWCHAIN_TOKEN_MINT` | mint адрес токена |
+| `NEXT_PUBLIC_COWCHAIN_SOL_TREASURY` | treasury для SOL settlement |
+| `NEXT_PUBLIC_SOL_USD_RATE` | курс SOL/USD для quote |
+| `SOLANA_ADMIN_PRIVATE_KEY` | admin keypair в JSON-array формате |
+| `SOLANA_ADMIN_EMAILS` | кто может пользоваться `/admin/token` |
+
+> Без этих переменных интерфейс приложения в целом может открываться, но on-chain покупка/продажа и SPL-admin возможности будут ограничены
+
+---
+
+## Полезные команды
+
+| Команда | Что делает |
+|---|---|
+| `npm run dev` | локальный dev-сервер |
+| `npm run build` | production build |
+| `npm run start` | запуск production build |
+| `npm run lint` | ESLint проверка |
+| `npm run test` | все Vitest тесты |
+| `npm run test:unit` | unit + hooks + component тесты |
+| `npm run test:api` | API тесты |
+| `npm run test:e2e` | Playwright e2e |
+| `npm run test:coverage` | покрытие тестами |
+| `npm run prisma:generate` | генерация Prisma client |
+| `npm run prisma:migrate` | применение локальных миграций |
+| `npm run prisma:studio` | открыть Prisma Studio |
+| `npm run solana:init:devnet` | инициализация devnet-настроек |
+| `npm run solana:test-buy` | devnet-проверка покупки |
+
+---
+
+## OAuth callback URL-ы
+
+Используйте их при настройке провайдеров:
+
+- Google: `http://localhost:3000/api/auth/callback/google`
+- GitHub: `http://localhost:3000/api/auth/callback/github`
+
+---
+
+## Аутентификация и защищённые маршруты
+
+### Реализованные auth endpoints
 
 - `POST /api/auth/register`
 - `POST /api/auth/verify/request`
@@ -39,66 +172,91 @@ npm run dev
 - `POST /api/wallet/link`
 - `GET|POST /api/auth/[...nextauth]`
 
-## Защищённые маршруты
+### Защищённые разделы
 
 - `/profile/*`
 - `/portfolio/*`
 - `/herd/*`
 
+---
+
 ## SPL Token Admin
 
-Добавлена админ-панель по адресу `/admin/token` для ролей `farmer` и `admin`.
+Админ-панель доступна по адресу `/admin/token` для ролей `farmer` и `admin`.
 
 ### Возможности
 
 - создание полноценного SPL mint через `@solana/spl-token`
 - выпуск начального и дополнительного supply
-- заполнение полей токена (`name`, `symbol`, `uri`)
+- заполнение token metadata (`name`, `symbol`, `url`)
 - просмотр текущего supply, authority и баланса держателя
 - отключение `mint authority`, чтобы зафиксировать эмиссию
 
-### Что нужно настроить
+Минимальный пример env для этого режима:
 
-Перед использованием добавьте в окружение(если отсутствует env):
-
-```bash
+```env
 SOLANA_CLUSTER=devnet
 SOLANA_RPC_URL=https://api.devnet.solana.com
-# опционально: список email, которым разрешён доступ к панели
 SOLANA_ADMIN_EMAILS=admin@example.com
 ```
 
+Если нужно инициализировать devnet mint / platform config:
 
-## Автоматизированные тесты
+```bash
+npm run solana:init:devnet
+```
 
-Установить браузеры для Playwright:
+---
+
+## Тестирование
+
+Перед e2e-тестами установите браузеры Playwright:
 
 ```bash
 npx playwright install chromium
 ```
 
-Запустить все юнит-, компонентные и интеграционные тесты API:
+Запуск:
 
 ```bash
 npm run test
-```
-
-Запустить отдельные наборы тестов:
-
-```bash
 npm run test:unit
 npm run test:api
-```
-
-Запустить сквозные (e2e) тесты:
-
-```bash
 npm run test:e2e
-```
-
-Сгенерировать отчёт о покрытии:
-
-```bash
 npm run test:coverage
 ```
+
+---
+
+
+## Troubleshooting
+
+### Prisma не видит `DATABASE_URL`
+
+
+```powershell
+$env:DATABASE_URL="file:./dev.db"
+npm run prisma:migrate
+```
+
+### Не запускаются e2e тесты
+
+Установите браузер:
+
+```bash
+npx playwright install chromium
+```
+
+### Покупка через Phantom недоступна
+
+Проверьте:
+
+- `NEXT_PUBLIC_COWCHAIN_SOL_TREASURY`
+- `NEXT_PUBLIC_COWCHAIN_PROGRAM_ID`
+- `NEXT_PUBLIC_COWCHAIN_TOKEN_MINT`
+- `NEXT_PUBLIC_SOLANA_RPC_URL`
+
+### В build есть warning про `middleware`
+
+
 
